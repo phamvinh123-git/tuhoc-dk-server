@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Đăng ký Tự học - Điều dưỡng (Prototype)</title>
+<title>Đăng ký Tự học</title>
 <style>
   :root{
     --bg:#f5f7fa; --panel:#ffffff; --ink:#1f2937; --muted:#6b7280;
@@ -112,7 +112,7 @@
 <header>
   <div>
     <h1 id="appTitle">Đăng ký Tự học</h1>
-    <div class="sub">Bản mẫu giao diện (prototype) · dữ liệu mô phỏng</div>
+    <div class="sub">Hệ thống đăng ký buổi tự học</div>
   </div>
   <div id="headerRight"></div>
 </header>
@@ -349,16 +349,6 @@ function screenLogin(){
       <div class="field"><label>Mật khẩu</label><input id="loginPass" type="password" placeholder="••••••" onkeydown="if(event.key==='Enter')doLogin()"></div>
       <button class="btn" style="width:100%;" onclick="doLogin()">Đăng nhập</button>
       <div class="switch-line">Chưa có tài khoản? <a onclick="goRegister()">Đăng ký tài khoản sinh viên</a></div>
-      <div class="demo-accounts">
-        <div class="hint" style="font-size:12px;margin-bottom:8px;">Tài khoản demo (bấm để tự điền, ngành Điều dưỡng) — mật khẩu chung <b>123456</b>, riêng Admin là <b>admin123</b>:</div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;">
-          <button type="button" class="btn secondary" onclick="quickFill('admin','admin123')">Quản trị viên</button>
-          <button type="button" class="btn secondary" onclick="quickFill('tbm.dd','123456')">Trưởng bộ môn</button>
-          <button type="button" class="btn secondary" onclick="quickFill('cv.dd','123456')">Cố vấn học tập</button>
-          <button type="button" class="btn secondary" onclick="quickFill('ql.dd','123456')">Quản lý học tập</button>
-          <button type="button" class="btn secondary" onclick="quickFill('dd45001','123456')">Sinh viên (DD45001)</button>
-        </div>
-      </div>
     </div>
   </div>`;
 }
@@ -382,10 +372,6 @@ function screenRegister(){
 }
 window.goRegister = function(){ authScreen = 'register'; render(); };
 window.goLogin = function(){ authScreen = 'login'; render(); };
-window.quickFill = function(u, p){
-  document.getElementById('loginUser').value = u;
-  document.getElementById('loginPass').value = p;
-};
 function userFromApi(u){
   return { id:u.id, username:u.username, hoTen:u.ho_ten, role:u.role, nganh:u.nganh, ma_sv:u.ma_sv, student_id:u.student_id };
 }
