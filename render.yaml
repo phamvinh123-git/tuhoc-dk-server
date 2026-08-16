@@ -1,0 +1,23 @@
+# Render Blueprint — cho phép bấm "New + > Blueprint" trên Render, trỏ vào repo chứa thư mục này,
+# và Render sẽ tự tạo cả Web Service (Node) lẫn Postgres database, tự nối DATABASE_URL cho nhau.
+# Xem README.deploy.md để biết các bước cụ thể.
+services:
+  - type: web
+    name: tuhoc-dk
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm run release && npm start
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: tuhoc-dk-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: PGSSL
+        value: require
+
+databases:
+  - name: tuhoc-dk-db
+    plan: free

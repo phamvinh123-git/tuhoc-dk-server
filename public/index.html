@@ -1,0 +1,1322 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Đăng ký Tự học - Điều dưỡng (Prototype)</title>
+<style>
+  :root{
+    --bg:#f5f7fa; --panel:#ffffff; --ink:#1f2937; --muted:#6b7280;
+    --brand:#2563eb; --brand-ink:#ffffff; --line:#e5e7eb;
+    --ok:#16a34a; --ok-bg:#dcfce7; --warn:#d97706; --warn-bg:#fef3c7;
+    --full:#dc2626; --full-bg:#fee2e2; --locked-bg:#f3f4f6;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink);}
+  header{background:var(--brand);color:var(--brand-ink);padding:16px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;}
+  header h1{font-size:18px;margin:0;font-weight:600;}
+  header .sub{font-size:12px;opacity:.85;margin-top:2px;}
+  .role-switch{display:flex;gap:6px;flex-wrap:wrap;}
+  .role-switch button{border:1px solid rgba(255,255,255,.5);background:rgba(255,255,255,.12);color:#fff;padding:7px 12px;border-radius:20px;cursor:pointer;font-size:13px;transition:.15s;}
+  .role-switch button.active{background:#fff;color:var(--brand);font-weight:600;border-color:#fff;}
+  .role-switch button:hover:not(.active){background:rgba(255,255,255,.25);}
+  main{max-width:1200px;margin:0 auto;padding:20px 24px 60px;}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;margin-bottom:18px;}
+  .card h2{margin:0 0 4px;font-size:16px;}
+  .card .desc{color:var(--muted);font-size:13px;margin-bottom:14px;}
+  .tabs{display:flex;gap:4px;margin-bottom:16px;border-bottom:1px solid var(--line);}
+  .tabs button{background:none;border:none;padding:10px 14px;font-size:13.5px;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;}
+  .tabs button.active{color:var(--brand);border-bottom-color:var(--brand);font-weight:600;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--line);}
+  th{background:#f9fafb;color:#374151;font-weight:600;white-space:nowrap;}
+  tr:hover td{background:#f9fafb;}
+  .grid-week{overflow-x:auto;}
+  .grid-week table{min-width:960px;table-layout:fixed;}
+  .grid-week th{vertical-align:top;}
+  .grid-week th .dow{display:block;}
+  .grid-week th .ddate{display:block;font-weight:500;color:var(--muted);font-size:11px;margin-top:1px;}
+  .grid-week td.cell{vertical-align:top;padding:5px;}
+  .slot-box{position:relative;background:#fff;border-radius:6px;padding:8px 9px 8px 12px;font-size:11.5px;line-height:1.45;min-height:96px;cursor:pointer;
+    border:1px solid var(--line); border-left:4px solid var(--line); box-shadow:0 1px 2px rgba(16,24,40,.04);}
+  .slot-box.open{border-left-color:var(--ok);}
+  .slot-box.near-full{border-left-color:var(--warn);}
+  .slot-box.full{border-left-color:var(--full);background:#fff7f7;}
+  .slot-box.locked-manual{border-left-color:#6b7280;background:#fafafa;}
+  .slot-box:hover{box-shadow:0 2px 8px rgba(16,24,40,.10);}
+  .slot-box .subj{font-weight:700;color:#111827;margin-bottom:3px;}
+  .slot-box .code{color:#4b5563;margin-bottom:4px;}
+  .slot-box .meta{color:#374151;}
+  .slot-box .meta b{color:#111827;font-weight:600;}
+  .slot-box .count{font-size:11px;margin-top:4px;font-weight:600;}
+  .slot-box.open .count{color:var(--ok);}
+  .slot-box.near-full .count{color:var(--warn);}
+  .slot-box.full .count{color:var(--full);}
+  .slot-box.locked-manual .count{color:#4b5563;}
+  .empty-cell{border-radius:6px;min-height:96px;display:flex;align-items:center;justify-content:center;color:#c1c7d0;font-size:11.5px;background:repeating-linear-gradient(45deg,#fbfbfc,#fbfbfc 8px,#f5f6f8 8px,#f5f6f8 16px);border:1px dashed #e5e7eb;}
+  .badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;}
+  .badge.open{background:var(--ok-bg);color:var(--ok);}
+  .badge.full{background:var(--full-bg);color:var(--full);}
+  .badge.locked{background:var(--locked-bg);color:#374151;}
+  .btn{background:var(--brand);color:#fff;border:none;padding:8px 14px;border-radius:8px;font-size:13px;cursor:pointer;}
+  .btn:hover{background:#1d4ed8;}
+  .btn.secondary{background:#fff;border:1px solid var(--line);color:var(--ink);}
+  .btn.danger{background:#dc2626;}
+  .btn:disabled{background:#d1d5db;cursor:not-allowed;color:#6b7280;}
+  .form-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;}
+  .form-row input, .form-row select, .form-row textarea{padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;flex:1;min-width:160px;font-family:inherit;}
+  .form-row label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px;}
+  .field{flex:1;min-width:160px;}
+  .field textarea{width:100%;resize:vertical;}
+  .eq-tag{display:inline-flex;align-items:center;gap:4px;background:#eef2ff;color:#3730a3;border-radius:12px;padding:2px 6px 2px 9px;margin:2px 4px 2px 0;font-size:11px;white-space:nowrap;}
+  .eq-tag button{border:none;background:none;color:#4338ca;cursor:pointer;font-size:12px;line-height:1;padding:0 2px;}
+  .eq-tag-ro{display:inline-flex;align-items:center;background:#eef2ff;color:#3730a3;border-radius:12px;padding:2px 9px;margin:2px 4px 2px 0;font-size:11px;white-space:nowrap;}
+  .toast{position:fixed;bottom:20px;right:20px;background:#111827;color:#fff;padding:12px 18px;border-radius:8px;font-size:13px;box-shadow:0 4px 14px rgba(0,0,0,.2);opacity:0;transform:translateY(10px);transition:.25s;pointer-events:none;z-index:50;}
+  .toast.show{opacity:1;transform:translateY(0);}
+  .stat-row{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:16px;}
+  .stat{background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px 16px;min-width:130px;}
+  .stat .num{font-size:22px;font-weight:700;color:var(--brand);}
+  .stat .lbl{font-size:12px;color:var(--muted);}
+  .week-nav{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:12px;}
+  .week-nav .btn.secondary{padding:6px 10px;font-size:12.5px;}
+  .week-nav-label{font-weight:700;font-size:14px;color:#111827;margin:0 6px;white-space:nowrap;}
+  .legend{display:flex;gap:14px;font-size:12px;color:var(--muted);margin-bottom:10px;flex-wrap:wrap;}
+  .legend span{display:inline-flex;align-items:center;gap:5px;}
+  .dot{width:10px;height:10px;border-radius:3px;display:inline-block;}
+  .empty{color:var(--muted);font-size:13px;text-align:center;padding:20px;}
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:center;justify-content:center;z-index:100;}
+  .modal-overlay.show{display:flex;}
+  .modal{background:#fff;border-radius:12px;padding:20px;width:420px;max-width:92vw;max-height:85vh;overflow:auto;}
+  .modal.wide{width:760px;max-width:95vw;}
+  .modal h3{margin-top:0;}
+  .modal .close{float:right;cursor:pointer;color:var(--muted);border:none;background:none;font-size:18px;}
+  small.hint{color:var(--muted);}
+  .auth-wrap{min-height:72vh;display:flex;align-items:center;justify-content:center;padding:40px 20px;}
+  .auth-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:28px 26px;width:400px;max-width:92vw;box-shadow:0 4px 20px rgba(16,24,40,.06);}
+  .auth-card h1{font-size:20px;margin:0 0 4px;color:var(--brand);}
+  .auth-card .desc{color:var(--muted);font-size:13px;margin-bottom:18px;line-height:1.5;}
+  .auth-card .field{margin-bottom:12px;}
+  .auth-card .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px;}
+  .auth-card .field input, .auth-card .field select{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;font-family:inherit;}
+  .auth-card a{color:var(--brand);text-decoration:none;cursor:pointer;}
+  .auth-card a:hover{text-decoration:underline;}
+  .auth-card .switch-line{text-align:center;margin-top:10px;font-size:13px;color:var(--muted);}
+  .demo-accounts{border-top:1px dashed var(--line);margin-top:16px;padding-top:12px;}
+  .demo-accounts .btn{padding:5px 10px;font-size:11.5px;}
+  .user-badge{font-size:12px;opacity:.95;display:flex;align-items:center;gap:10px;}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1 id="appTitle">Đăng ký Tự học</h1>
+    <div class="sub">Bản mẫu giao diện (prototype) · dữ liệu mô phỏng</div>
+  </div>
+  <div id="headerRight"></div>
+</header>
+
+<main id="app"></main>
+
+<div class="toast" id="toast"></div>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" id="modalBody"></div>
+</div>
+
+<script>
+/* ============================== DỮ LIỆU MẪU ============================== */
+const SLOTS = [
+  {id:1, buoi:'Sáng', label:'8:00 - 8:50'},
+  {id:2, buoi:'Sáng', label:'9:00 - 9:50'},
+  {id:3, buoi:'Sáng', label:'10:00 - 10:50'},
+  {id:4, buoi:'Chiều', label:'13:30 - 14:20'},
+  {id:5, buoi:'Chiều', label:'14:30 - 15:20'},
+  {id:6, buoi:'Chiều', label:'15:30 - 16:20'},
+];
+const DAYS = ['Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6'];
+
+// ==== NGÀNH (dự phòng mở rộng ngoài Điều dưỡng) ====
+// Mỗi ngành có bộ dữ liệu riêng: tổ/lớp, môn học, lịch học, kho dụng cụ — độc lập hoàn toàn với ngành khác.
+// Đổi ngành ở góc trên bên phải sẽ đổi hẳn toàn bộ dữ liệu đang hiển thị cho mọi vai trò.
+const NGANH_LIST = ['Điều dưỡng','Phục hồi chức năng','Kỹ thuật xét nghiệm','Chẩn đoán hình ảnh'];
+let currentNganh = NGANH_LIST[0];
+
+const TO_LOP_BY_NGANH = {
+  'Điều dưỡng': ['Tổ 1 - ĐD45A','Tổ 2 - ĐD45A','Tổ 3 - ĐD45B'],
+  'Phục hồi chức năng': ['Tổ 1 - PHCN45A','Tổ 2 - PHCN45A'],
+  'Kỹ thuật xét nghiệm': ['Tổ 1 - XN45A','Tổ 2 - XN45A'],
+  'Chẩn đoán hình ảnh': ['Tổ 1 - CDHA45A','Tổ 2 - CDHA45A'],
+};
+const SUBJECTS_BY_NGANH = {
+  'Điều dưỡng': ['Kỹ thuật tiêm truyền','Chăm sóc vết thương','Đo dấu hiệu sinh tồn','Sơ cấp cứu cơ bản','Kỹ năng giao tiếp lâm sàng'],
+  'Phục hồi chức năng': ['Vận động trị liệu cơ bản','Xoa bóp bấm huyệt','Điện trị liệu','Hướng dẫn dụng cụ trợ giúp di chuyển'],
+  'Kỹ thuật xét nghiệm': ['Lấy mẫu máu tĩnh mạch','Nhuộm và soi tiêu bản','Xét nghiệm sinh hóa cơ bản','Xét nghiệm huyết học cơ bản'],
+  'Chẩn đoán hình ảnh': ['Kỹ thuật chụp X-quang cơ bản','Tư thế chụp X-quang chi','Vận hành máy siêu âm cơ bản','An toàn bức xạ trong chẩn đoán hình ảnh'],
+};
+const SUBJECT_CODES_BY_NGANH = {
+  'Điều dưỡng': {'Kỹ thuật tiêm truyền':'DD301','Chăm sóc vết thương':'DD302','Đo dấu hiệu sinh tồn':'DD303','Sơ cấp cứu cơ bản':'DD304','Kỹ năng giao tiếp lâm sàng':'DD305'},
+  'Phục hồi chức năng': {'Vận động trị liệu cơ bản':'PHCN301','Xoa bóp bấm huyệt':'PHCN302','Điện trị liệu':'PHCN303','Hướng dẫn dụng cụ trợ giúp di chuyển':'PHCN304'},
+  'Kỹ thuật xét nghiệm': {'Lấy mẫu máu tĩnh mạch':'XN301','Nhuộm và soi tiêu bản':'XN302','Xét nghiệm sinh hóa cơ bản':'XN303','Xét nghiệm huyết học cơ bản':'XN304'},
+  'Chẩn đoán hình ảnh': {'Kỹ thuật chụp X-quang cơ bản':'CDHA301','Tư thế chụp X-quang chi':'CDHA302','Vận hành máy siêu âm cơ bản':'CDHA303','An toàn bức xạ trong chẩn đoán hình ảnh':'CDHA304'},
+};
+const SUBJECT_TEACHERS_BY_NGANH = {
+  'Điều dưỡng': {'Kỹ thuật tiêm truyền':'Nguyễn Thị Hạnh','Chăm sóc vết thương':'Trần Minh Tuấn','Đo dấu hiệu sinh tồn':'Lê Thị Thu','Sơ cấp cứu cơ bản':'Phạm Văn Nam','Kỹ năng giao tiếp lâm sàng':'Hoàng Thị Yến'},
+  'Phục hồi chức năng': {'Vận động trị liệu cơ bản':'Đỗ Văn Hùng','Xoa bóp bấm huyệt':'Bùi Thị Nga','Điện trị liệu':'Vũ Đình Long','Hướng dẫn dụng cụ trợ giúp di chuyển':'Ngô Thị Hiền'},
+  'Kỹ thuật xét nghiệm': {'Lấy mẫu máu tĩnh mạch':'Trịnh Văn Sơn','Nhuộm và soi tiêu bản':'Đặng Thị Linh','Xét nghiệm sinh hóa cơ bản':'Lý Văn Khoa','Xét nghiệm huyết học cơ bản':'Phan Thị Duyên'},
+  'Chẩn đoán hình ảnh': {'Kỹ thuật chụp X-quang cơ bản':'Hồ Văn Tâm','Tư thế chụp X-quang chi':'Dương Thị Kiều','Vận hành máy siêu âm cơ bản':'Mai Văn Đạt','An toàn bức xạ trong chẩn đoán hình ảnh':'Chu Thị Oanh'},
+};
+const SUBJECT_CONTENT_BY_NGANH = {
+  'Điều dưỡng': {
+    'Kỹ thuật tiêm truyền':'Thực hành kỹ thuật tiêm bắp, tiêm tĩnh mạch và truyền dịch trên mô hình.',
+    'Chăm sóc vết thương':'Thực hành thay băng, rửa vết thương và đánh giá mức độ nhiễm trùng.',
+    'Đo dấu hiệu sinh tồn':'Thực hành đo huyết áp, nhịp tim, nhịp thở, nhiệt độ cho bệnh nhân mô phỏng.',
+    'Sơ cấp cứu cơ bản':'Thực hành ép tim ngoài lồng ngực (CPR), xử trí ngạt thở, cầm máu vết thương hở.',
+    'Kỹ năng giao tiếp lâm sàng':'Thực hành kỹ năng giao tiếp, tư vấn và trấn an người bệnh trong tình huống mô phỏng.',
+  },
+  'Phục hồi chức năng': {
+    'Vận động trị liệu cơ bản':'Thực hành các bài tập vận động chủ động — thụ động, tầm vận động khớp cho người bệnh mô phỏng.',
+    'Xoa bóp bấm huyệt':'Thực hành các kỹ thuật xoa bóp, bấm huyệt cơ bản trên mô hình.',
+    'Điện trị liệu':'Thực hành vận hành máy điện xung, siêu âm trị liệu và các thông số an toàn.',
+    'Hướng dẫn dụng cụ trợ giúp di chuyển':'Thực hành hướng dẫn người bệnh sử dụng nạng, khung tập đi, xe lăn.',
+  },
+  'Kỹ thuật xét nghiệm': {
+    'Lấy mẫu máu tĩnh mạch':'Thực hành kỹ thuật lấy máu tĩnh mạch đúng quy trình vô khuẩn trên mô hình cánh tay.',
+    'Nhuộm và soi tiêu bản':'Thực hành các phương pháp nhuộm tiêu bản cơ bản và quan sát dưới kính hiển vi.',
+    'Xét nghiệm sinh hóa cơ bản':'Thực hành các xét nghiệm sinh hóa máu cơ bản trên máy phân tích mô phỏng.',
+    'Xét nghiệm huyết học cơ bản':'Thực hành đếm tế bào máu, xác định nhóm máu cơ bản.',
+  },
+  'Chẩn đoán hình ảnh': {
+    'Kỹ thuật chụp X-quang cơ bản':'Thực hành vận hành máy X-quang, cài đặt thông số chụp cơ bản.',
+    'Tư thế chụp X-quang chi':'Thực hành các tư thế chụp X-quang chi trên, chi dưới đúng kỹ thuật.',
+    'Vận hành máy siêu âm cơ bản':'Thực hành các thao tác cơ bản trên máy siêu âm, nhận diện hình ảnh chuẩn.',
+    'An toàn bức xạ trong chẩn đoán hình ảnh':'Thực hành các quy tắc an toàn bức xạ, sử dụng trang bị bảo hộ khi chụp.',
+  },
+};
+// Truy cập nhanh dữ liệu của NGÀNH ĐANG CHỌN — mọi hàm render/thao tác đều đi qua các hàm này
+// thay vì đọc thẳng biến toàn cục, để đảm bảo luôn đúng phạm vi ngành đang xem.
+function curSchedule(){ return schedule[currentNganh]; }
+function curEquipment(){ return equipment[currentNganh]; }
+function curEquipAssignments(){ return equipmentAssignments[currentNganh]; }
+function curToLop(){ return TO_LOP_BY_NGANH[currentNganh]; }
+function curSubjects(){ return SUBJECTS_BY_NGANH[currentNganh]; }
+function curStudents(){ return students.filter(s=>s.nganh===currentNganh); }
+
+// Ngày cụ thể của Thứ 2 - Thứ 6 trong tuần hiện tại (để hiển thị dưới tên Thứ, giống bảng tham chiếu)
+function getMonday(base){
+  const d = new Date(base);
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day===0 ? -6 : 1);
+  return new Date(d.getFullYear(), d.getMonth(), diff);
+}
+function fmtDate(d){
+  return String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + d.getFullYear();
+}
+function isoDate(d){
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function fmtDateFromISO(iso){
+  if(!iso) return '';
+  const [y,m,dd] = iso.split('-');
+  return `${dd}/${m}/${y}`;
+}
+function dowLabelFromISO(iso){
+  const d = new Date(iso+'T00:00:00');
+  const dow = d.getDay(); // 0=CN..6=T7
+  const idx = dow===0 ? 6 : dow-1; // 0=Thứ2..6=CN
+  return DAYS[idx] || '';
+}
+const MONDAY = getMonday(new Date());
+// Trả về 5 ngày (Thứ 2 - Thứ 6) của tuần cách tuần hiện tại `offset` tuần (0 = tuần này, 1 = tuần sau, -1 = tuần trước...)
+function getWeekDates(offset){
+  return DAYS.map((_,i)=> new Date(MONDAY.getFullYear(), MONDAY.getMonth(), MONDAY.getDate() + offset*7 + i));
+}
+const WEEK_DATES = getWeekDates(0); // dùng để khởi tạo dữ liệu mẫu cho tuần hiện tại
+let weekOffset = 0; // con trỏ tuần đang xem/thao tác — dùng chung cho mọi màn hình có lưới lịch
+const WEEK_OFFSET_MIN = -8, WEEK_OFFSET_MAX = 52; // giới hạn điều hướng: 8 tuần trước tới 52 tuần (1 năm) sau
+
+// ============================== DỮ LIỆU THẬT: nạp từ backend (API), KHÔNG còn seed cứng trong file này ==============================
+// Toàn bộ dữ liệu nghiệp vụ (sinh viên, lịch học, kho dụng cụ, tài khoản...) giờ sống trong PostgreSQL, truy cập
+// qua các API /api/... — file này chỉ còn giữ state cục bộ làm "bản sao đang xem" (hydrate từ API), để phần
+// render/screen bên dưới (vốn đọc thẳng các biến toàn cục students/schedule/equipment/...) không phải sửa lại.
+let students = [];
+let schedule = {};
+NGANH_LIST.forEach(n=> schedule[n] = {});
+let equipment = {};
+NGANH_LIST.forEach(n=> equipment[n] = []);
+let equipmentAssignments = {};
+NGANH_LIST.forEach(n=> equipmentAssignments[n] = []);
+let selectedEquipKey = null; // key `${ngayISO}_${slotId}` của buổi học đang giao dụng cụ (trong phạm vi ngành đang chọn)
+function todayStr(){
+  const d = new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+
+let currentRole = 'SINH_VIEN'; // vai trò đang xem — tài khoản không phải Admin thì bị khóa cứng theo đúng vai trò của tài khoản
+let currentStudent = null;     // sinh viên đang thao tác — set khi đăng nhập (SV) hoặc khi Admin xem thử màn Sinh viên
+
+const ROLES = [
+  {id:'TRUONG_BO_MON', label:'Cô trưởng bộ môn'},
+  {id:'CO_VAN', label:'Cố vấn học tập'},
+  {id:'QUAN_LY', label:'Quản lý học tập'},
+  {id:'SINH_VIEN', label:'Sinh viên'},
+];
+const ROLE_LABELS = {
+  ADMIN:'Quản trị viên', TRUONG_BO_MON:'Cô trưởng bộ môn', CO_VAN:'Cố vấn học tập',
+  QUAN_LY:'Quản lý học tập', SINH_VIEN:'Sinh viên',
+};
+
+/* ============================== KẾT NỐI BACKEND (API thật) ==============================
+   authToken lưu ở localStorage để giữ đăng nhập qua lần tải lại trang. Mọi request kèm theo
+   header Authorization: Bearer <token>; server tự kiểm tra quyền theo vai trò + ngành, không
+   tin tưởng riêng dữ liệu phía client. */
+let authToken = localStorage.getItem('tuhoc_token') || null;
+let adminAccountsCache = []; // chỉ nạp khi vào màn "Quản lý tài khoản"
+
+async function apiFetch(path, opts={}){
+  const headers = Object.assign({'Content-Type':'application/json'}, opts.headers||{});
+  if(authToken) headers['Authorization'] = 'Bearer ' + authToken;
+  const res = await fetch('/api'+path, Object.assign({}, opts, {headers}));
+  let body = null;
+  try{ body = await res.json(); }catch(e){ /* no body */ }
+  if(!res.ok){
+    const err = new Error((body && body.error) || `Lỗi máy chủ (${res.status})`);
+    err.status = res.status;
+    throw err;
+  }
+  return body;
+}
+function setAuthToken(t){
+  authToken = t;
+  if(t) localStorage.setItem('tuhoc_token', t); else localStorage.removeItem('tuhoc_token');
+}
+// Nạp toàn bộ dữ liệu (lịch, dụng cụ, giao dụng cụ, sinh viên) của 1 ngành từ API, đổ vào đúng các biến
+// toàn cục schedule[]/equipment[]/equipmentAssignments[]/students mà phần render đang dùng.
+async function loadNganhData(tenNganh){
+  const data = await apiFetch('/bootstrap?nganh='+encodeURIComponent(tenNganh));
+  schedule[tenNganh] = data.schedule;
+  equipment[tenNganh] = data.equipment;
+  equipmentAssignments[tenNganh] = data.equipmentAssignments.map(a=>({
+    id:a.id, ten:a.ten, slotKey:`${a.dateISO}_${a.slotId}`,
+    slot:`${dowLabelFromISO(a.dateISO)} ${fmtDateFromISO(a.dateISO)} · ${(SLOTS.find(s=>s.id===a.slotId)||{}).label||''} · ${a.subject}`,
+    ma_sv:a.ma_sv, ten_sv:a.ten_sv, to_lop:a.to_lop, soLuong:a.soLuong, ngayGiao:a.ngayGiao,
+  }));
+  students = students.filter(s=>s.nganh!==tenNganh).concat(data.students.map(s=>({...s, nganh:tenNganh})));
+}
+async function loadAdminAccounts(){
+  const data = await apiFetch('/admin/accounts');
+  adminAccountsCache = data.accounts;
+}
+
+let currentUser = null;   // null = chưa đăng nhập. Sau khi đăng nhập: {id, username, ho_ten, role, nganh, ma_sv?, student_id?}
+let authScreen = 'login'; // 'login' | 'register' — chỉ có ý nghĩa khi CHƯA đăng nhập
+
+/* ============================== TIỆN ÍCH ============================== */
+function slotStatus(cls){
+  if(!cls) return null;
+  const count = cls.registered.length;
+  if(cls.lockedManual) return 'locked-manual';
+  if(count >= cls.capacity) return 'full';
+  if(count >= cls.capacity - 2) return 'near-full';
+  return 'open';
+}
+function statusLabel(status){
+  return {open:'Còn chỗ', 'near-full':'Sắp đầy', full:'Đã đầy (khóa)', 'locked-manual':'Đã khóa (thủ công)'}[status] || '';
+}
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2200);
+}
+function closeModal(){ document.getElementById('modalOverlay').classList.remove('show'); }
+function openModal(html, opts={}){
+  const modalBody = document.getElementById('modalBody');
+  modalBody.innerHTML = html;
+  modalBody.classList.toggle('wide', !!opts.wide);
+  document.getElementById('modalOverlay').classList.add('show');
+}
+
+/* ============================== ĐĂNG NHẬP / ĐĂNG XUẤT / ĐĂNG KÝ TÀI KHOẢN ============================== */
+function screenLogin(){
+  return `
+  <div class="auth-wrap">
+    <div class="auth-card">
+      <h1>Đăng ký Tự học</h1>
+      <div class="desc">Đăng nhập để tiếp tục. Mỗi tài khoản chỉ thấy đúng ngành và đúng vai trò được cấp — riêng Quản trị viên xem/thao tác được trên mọi ngành, mọi vai trò.</div>
+      <div class="field"><label>Tên đăng nhập</label><input id="loginUser" onkeydown="if(event.key==='Enter')doLogin()"></div>
+      <div class="field"><label>Mật khẩu</label><input id="loginPass" type="password" placeholder="••••••" onkeydown="if(event.key==='Enter')doLogin()"></div>
+      <button class="btn" style="width:100%;" onclick="doLogin()">Đăng nhập</button>
+      <div class="switch-line">Chưa có tài khoản? <a onclick="goRegister()">Đăng ký tài khoản sinh viên</a></div>
+      <div class="demo-accounts">
+        <div class="hint" style="font-size:12px;margin-bottom:8px;">Tài khoản demo (bấm để tự điền, ngành Điều dưỡng) — mật khẩu chung <b>123456</b>, riêng Admin là <b>admin123</b>:</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button type="button" class="btn secondary" onclick="quickFill('admin','admin123')">Quản trị viên</button>
+          <button type="button" class="btn secondary" onclick="quickFill('tbm.dd','123456')">Trưởng bộ môn</button>
+          <button type="button" class="btn secondary" onclick="quickFill('cv.dd','123456')">Cố vấn học tập</button>
+          <button type="button" class="btn secondary" onclick="quickFill('ql.dd','123456')">Quản lý học tập</button>
+          <button type="button" class="btn secondary" onclick="quickFill('dd45001','123456')">Sinh viên (DD45001)</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+function screenRegister(){
+  return `
+  <div class="auth-wrap">
+    <div class="auth-card" style="width:460px;">
+      <h1>Đăng ký tài khoản sinh viên</h1>
+      <div class="desc">Dành cho sinh viên tự tạo tài khoản để đăng ký buổi tự học. Tài khoản cán bộ (Trưởng bộ môn / Cố vấn học tập / Quản lý học tập / Quản trị viên) do Quản trị viên cấp, không tự đăng ký ở đây được.</div>
+      <div class="field"><label>Ngành</label><select id="regNganh">${NGANH_LIST.map(n=>`<option>${n}</option>`).join('')}</select></div>
+      <div class="field"><label>Mã sinh viên</label><input id="regMaSv"></div>
+      <div class="field"><label>Họ tên</label><input id="regTenSv"></div>
+      <div class="field"><label>Tổ / Lớp</label><input id="regToLop"></div>
+      <div class="field"><label>Tên đăng nhập</label><input id="regUser"></div>
+      <div class="field"><label>Mật khẩu</label><input id="regPass" type="password" placeholder="tối thiểu 4 ký tự"></div>
+      <div class="field"><label>Nhập lại mật khẩu</label><input id="regPass2" type="password"></div>
+      <button class="btn" style="width:100%;margin-top:4px;" onclick="doRegister()">Tạo tài khoản</button>
+      <div class="switch-line">Đã có tài khoản? <a onclick="goLogin()">Đăng nhập</a></div>
+    </div>
+  </div>`;
+}
+window.goRegister = function(){ authScreen = 'register'; render(); };
+window.goLogin = function(){ authScreen = 'login'; render(); };
+window.quickFill = function(u, p){
+  document.getElementById('loginUser').value = u;
+  document.getElementById('loginPass').value = p;
+};
+function userFromApi(u){
+  return { id:u.id, username:u.username, hoTen:u.ho_ten, role:u.role, nganh:u.nganh, ma_sv:u.ma_sv, student_id:u.student_id };
+}
+window.doLogin = async function(){
+  const u = document.getElementById('loginUser').value;
+  const p = document.getElementById('loginPass').value;
+  if(!u || !p) return toast('Vui lòng nhập tên đăng nhập và mật khẩu');
+  let res;
+  try{ res = await apiFetch('/auth/login', {method:'POST', body:JSON.stringify({username:u, password:p})}); }
+  catch(e){ return toast(e.message); }
+  setAuthToken(res.token);
+  const acc = userFromApi(res.user);
+  currentUser = acc;
+  weekOffset = 0;
+  selectedEquipKey = null;
+  const targetNganh = acc.role === 'ADMIN' ? NGANH_LIST[0] : acc.nganh;
+  await loadNganhData(targetNganh);
+  if(acc.role === 'ADMIN'){
+    currentNganh = targetNganh;
+    currentRole = 'TRUONG_BO_MON';
+    currentStudent = curStudents()[0] || null;
+  } else {
+    currentNganh = acc.nganh;
+    currentRole = acc.role;
+    currentStudent = acc.role === 'SINH_VIEN' ? students.find(s=>s.ma_sv===acc.ma_sv) : (curStudents()[0] || null);
+  }
+  toast(`Xin chào, ${acc.hoTen}!`);
+  render();
+};
+window.doLogout = function(){
+  currentUser = null;
+  setAuthToken(null);
+  authScreen = 'login';
+  closeModal();
+  toast('Đã đăng xuất');
+  render();
+};
+window.doRegister = async function(){
+  const nganh = document.getElementById('regNganh').value;
+  const ma_sv = document.getElementById('regMaSv').value.trim().toUpperCase();
+  const ten_sv = document.getElementById('regTenSv').value.trim();
+  const to_lop = document.getElementById('regToLop').value.trim();
+  const username = document.getElementById('regUser').value.trim().toLowerCase();
+  const pass = document.getElementById('regPass').value;
+  const pass2 = document.getElementById('regPass2').value;
+  if(!ma_sv || !ten_sv || !to_lop || !username || !pass) return toast('Vui lòng điền đầy đủ thông tin');
+  if(pass !== pass2) return toast('Mật khẩu nhập lại không khớp');
+  if(pass.length < 4) return toast('Mật khẩu cần tối thiểu 4 ký tự');
+  try{
+    await apiFetch('/auth/register', {method:'POST', body:JSON.stringify({nganh, ma_sv, ten_sv, to_lop, username, password:pass, password2:pass2})});
+  }catch(e){ return toast(e.message); }
+  toast('Tạo tài khoản thành công! Hãy đăng nhập.');
+  goLogin();
+};
+
+/* ============================== ĐĂNG KÝ / HỦY ============================== */
+async function registerStudent(dateISO, slotId, sv){
+  const key = `${dateISO}_${slotId}`;
+  const cls = curSchedule()[key];
+  if(!cls) return toast('Slot không tồn tại');
+  try{
+    const body = {scheduleEntryId: cls.id};
+    if(currentUser.role === 'ADMIN') body.studentId = sv.id;
+    await apiFetch('/registrations', {method:'POST', body:JSON.stringify(body)});
+  }catch(e){ return toast(e.message); }
+  await loadNganhData(currentNganh);
+  toast(`Đăng ký thành công: ${sv.ten_sv} — ${dowLabelFromISO(dateISO)} ${fmtDateFromISO(dateISO)} ${SLOTS.find(s=>s.id==slotId).label}`);
+  render();
+}
+// reopenRole: nếu được truyền (gọi từ modal chi tiết slot), mở lại đúng modal đó sau khi dữ liệu đã làm mới —
+// tránh tình trạng modal vẫn hiển thị danh sách cũ (chưa gỡ SV vừa hủy) do render() chỉ vẽ lại phần app phía sau modal.
+async function cancelStudent(dateISO, slotId, ma_sv, reopenRole){
+  const key = `${dateISO}_${slotId}`;
+  const cls = curSchedule()[key];
+  if(!cls) return;
+  const sv = curStudents().find(s=>s.ma_sv===ma_sv);
+  if(!sv) return;
+  try{
+    const qs = new URLSearchParams({scheduleEntryId:cls.id, studentId:sv.id});
+    await apiFetch('/registrations?'+qs.toString(), {method:'DELETE'});
+  }catch(e){ return toast(e.message); }
+  await loadNganhData(currentNganh);
+  toast('Đã hủy đăng ký');
+  if(reopenRole){ render(); openSlotDetailModal(dateISO, slotId, reopenRole); }
+  else render();
+}
+async function toggleManualLock(dateISO, slotId){
+  const cls = curSchedule()[`${dateISO}_${slotId}`];
+  if(!cls) return;
+  try{
+    await apiFetch(`/schedule/${cls.id}/toggle-lock`, {method:'POST'});
+  }catch(e){ return toast(e.message); }
+  await loadNganhData(currentNganh);
+  const newCls = curSchedule()[`${dateISO}_${slotId}`];
+  toast(newCls.lockedManual ? 'Đã khóa slot (thủ công)' : 'Đã mở lại slot');
+  render();
+}
+
+/* ============================== ĐIỀU HƯỚNG TUẦN ============================== */
+window.prevWeek = function(){
+  if(weekOffset <= WEEK_OFFSET_MIN) return;
+  weekOffset--; render();
+};
+window.nextWeek = function(){
+  if(weekOffset >= WEEK_OFFSET_MAX) return;
+  weekOffset++; render();
+};
+window.thisWeek = function(){ weekOffset = 0; render(); };
+window.jumpWeeks = function(n){
+  weekOffset = Math.max(WEEK_OFFSET_MIN, Math.min(WEEK_OFFSET_MAX, weekOffset + n));
+  render();
+};
+function renderWeekNav(){
+  const wd = getWeekDates(weekOffset);
+  const rangeLabel = `${fmtDate(wd[0])} – ${fmtDate(wd[4])}`;
+  const tag = weekOffset===0 ? '<span class="badge open" style="margin-left:8px;">Tuần này</span>'
+    : `<span class="badge locked" style="margin-left:8px;">${weekOffset>0?'Tuần +'+weekOffset:'Tuần '+weekOffset}</span>`;
+  return `<div class="week-nav">
+    <button class="btn secondary" onclick="prevWeek()" ${weekOffset<=WEEK_OFFSET_MIN?'disabled':''}>◀ Tuần trước</button>
+    <button class="btn secondary" onclick="jumpWeeks(-4)" title="Lùi 4 tuần">«</button>
+    <div class="week-nav-label">${rangeLabel}${tag}</div>
+    <button class="btn secondary" onclick="jumpWeeks(4)" title="Tiến 4 tuần">»</button>
+    <button class="btn secondary" onclick="nextWeek()" ${weekOffset>=WEEK_OFFSET_MAX?'disabled':''}>Tuần sau ▶</button>
+    ${weekOffset!==0 ? '<button class="btn secondary" onclick="thisWeek()">Về tuần này</button>' : ''}
+  </div>`;
+}
+
+/* ============================== RENDER: LƯỚI TUẦN (Bảng B) ============================== */
+function renderWeekGrid(opts={}){
+  const {clickable=false, roleForClick=null} = opts;
+  const weekDates = getWeekDates(weekOffset);
+  let html = renderWeekNav();
+  html += `<div class="legend">
+    <span><i class="dot" style="background:#16a34a"></i> Còn chỗ</span>
+    <span><i class="dot" style="background:#d97706"></i> Sắp đầy (≥8/10)</span>
+    <span><i class="dot" style="background:#dc2626"></i> Đã đầy — tự khóa</span>
+    <span><i class="dot" style="background:#6b7280"></i> Khóa thủ công</span>
+  </div>`;
+  html += '<div class="grid-week"><table><thead><tr><th style="width:120px;">Khung giờ</th>' +
+    DAYS.map((d,i)=>`<th><span class="dow">${d}</span><span class="ddate">${fmtDate(weekDates[i])}</span></th>`).join('') +
+    '</tr></thead><tbody>';
+  SLOTS.forEach(s=>{
+    html += `<tr><td style="background:#fffbe8;color:#92400e;"><b>${s.label}</b><br><small class="hint" style="color:#b45309;">${s.buoi}</small></td>`;
+    DAYS.forEach((d,di)=>{
+      const dateISO = isoDate(weekDates[di]);
+      const key = `${dateISO}_${s.id}`;
+      const cls = curSchedule()[key];
+      const canEdit = clickable && roleForClick==='TRUONG_BO_MON';
+      if(!cls){
+        if(canEdit){
+          html += `<td class="cell"><div class="empty-cell" style="cursor:pointer;" onclick="handleSlotClick('${dateISO}',${s.id},'${roleForClick}')">+ Thiết lập lịch học</div></td>`;
+        } else {
+          html += `<td class="cell"><div class="empty-cell">Không mở lớp</div></td>`;
+        }
+      } else {
+        const status = slotStatus(cls);
+        const clickAttr = clickable ? `onclick="handleSlotClick('${dateISO}',${s.id},'${roleForClick}')"` : '';
+        html += `<td class="cell"><div class="slot-box ${status}" ${clickAttr} style="${clickable?'cursor:pointer':''}">
+          <div class="subj">${cls.subject}</div>
+          <div class="code">${cls.code||''}</div>
+          <div class="meta">Phòng: <b>${cls.room}</b></div>
+          <div class="meta">GV: <b>${cls.teacher}</b></div>
+          <div class="count">${cls.registered.length}/${cls.capacity} SV${status==='full'?' — Đã khóa':(status==='locked-manual'?' — Khóa tay':'')}</div>
+        </div></td>`;
+      }
+    });
+    html += '</tr>';
+  });
+  html += '</tbody></table></div>';
+  return html;
+}
+
+/* ============================== MODAL CHI TIẾT SLOT ============================== */
+function openSlotDetailModal(dateISO, slotId, role){
+  const cls = curSchedule()[`${dateISO}_${slotId}`];
+  const slot = SLOTS.find(s=>s.id==slotId);
+  const status = slotStatus(cls);
+  const key = `${dateISO}_${slotId}`;
+  let rowsHtml = cls.registered.map(sv=>{
+    const eqItems = curEquipAssignments().filter(a=>a.slotKey===key && a.ma_sv===sv.ma_sv);
+    const eqHtml = eqItems.length
+      ? eqItems.map(a=>`<span class="eq-tag-ro">${a.ten} ×${a.soLuong}</span>`).join('')
+      : '<span class="hint">Chưa giao</span>';
+    return `<tr><td>${sv.ma_sv}</td><td>${sv.ten_sv}</td><td>${sv.to_lop}</td><td>${eqHtml}</td>
+    <td>${role==='TRUONG_BO_MON'||role==='QUAN_LY' ? `<button class="btn danger" style="padding:4px 8px;font-size:11px;" onclick="cancelStudent('${dateISO}',${slotId},'${sv.ma_sv}','${role}')">Hủy</button>`:''}</td></tr>`;
+  }).join('');
+  if(!rowsHtml) rowsHtml = '<tr><td colspan="5" class="empty">Chưa có sinh viên đăng ký</td></tr>';
+
+  let actions = '';
+  if(role === 'TRUONG_BO_MON'){
+    actions = `<div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn ${cls.lockedManual?'secondary':'danger'}" onclick="toggleManualLock('${dateISO}',${slotId});closeModal();">
+        ${cls.lockedManual? 'Mở lại slot' : 'Khóa slot (thủ công)'}
+      </button>
+      <button class="btn secondary" onclick="openScheduleEditor('${dateISO}',${slotId})">Sửa lịch học</button>
+    </div>`;
+  }
+
+  openModal(`
+    <button class="close" onclick="closeModal()">✕</button>
+    <h3>${dowLabelFromISO(dateISO)} ${fmtDateFromISO(cls.ngayHoc)} · ${slot.label}</h3>
+    <p style="margin:0 0 6px;color:var(--muted);font-size:13px;">
+      Môn học: <b>${cls.subject}</b>${cls.code?` (${cls.code})`:''} · Phòng: ${cls.room} · GV: ${cls.teacher} ·
+      Sĩ số: <b>${cls.registered.length}/${cls.capacity}</b> ·
+      Trạng thái: <span class="badge ${status==='open'?'open':(status==='full'?'full':'locked')}">${statusLabel(status)}</span>
+    </p>
+    ${cls.content ? `<p style="margin:0 0 10px;color:var(--muted);font-size:13px;">Nội dung: ${cls.content}</p>` : ''}
+    <table><thead><tr><th>Mã SV</th><th>Tên</th><th>Tổ/Lớp</th><th>Dụng cụ đã giao</th><th></th></tr></thead><tbody>${rowsHtml}</tbody></table>
+    ${actions}
+  `, {wide:true});
+}
+
+/* ============================== THIẾT LẬP / SỬA / XÓA LỊCH HỌC (Quản lý học tập, Cô trưởng bộ môn) ============================== */
+// cellDateISO: ngày của ô lưới vừa bấm — khi tạo mới có thể đổi lại ngày trước khi lưu;
+// khi sửa buổi đã có, ngày bị khóa (không đổi) để tránh làm lệch danh sách đăng ký đã gắn với slot đó,
+// nhưng Slot học vẫn đổi được (kể cả khi sửa) — nếu buổi đã có sinh viên đăng ký thì khóa Slot lại để tránh mất dữ liệu đăng ký.
+function openScheduleEditor(cellDateISO, slotId){
+  const key = `${cellDateISO}_${slotId}`;
+  const cls = curSchedule()[key];
+  const slot = SLOTS.find(s=>s.id==slotId);
+  const isNew = !cls;
+  const hasRegistered = !isNew && cls.registered.length>0;
+  const initialNganh = currentNganh;
+  const canPickNganh = ROLES_XEM_MOI_NGANH.includes(currentUser.role);
+  const subjectOptions = Array.from(new Set([...(SUBJECTS_BY_NGANH[initialNganh]||[]), ...Object.values(schedule[initialNganh]||{}).map(c=>c.subject)]));
+
+  openModal(`
+    <button class="close" onclick="closeModal()">✕</button>
+    <h3>${isNew ? 'Thiết lập buổi học mới' : 'Sửa lịch học'} — ${dowLabelFromISO(cellDateISO)} · ${slot.label}</h3>
+    <div class="field" style="margin-bottom:10px;">
+      <label>Ngày học</label>
+      <input id="schedDate" type="date" value="${cellDateISO}" ${isNew?'':'disabled'}>
+      ${isNew ? '<small class="hint">Có thể đổi sang ngày khác nếu cần (vẫn giữ đúng Slot đã chọn).</small>' : '<small class="hint">Không đổi được ngày của buổi đã tạo — hãy xóa và thiết lập lại nếu cần chuyển ngày.</small>'}
+    </div>
+    <div class="field" style="margin-bottom:10px;">
+      <label>Slot học (khung giờ)</label>
+      <select id="schedSlot" ${hasRegistered?'disabled':''}>${SLOTS.map(s=>`<option value="${s.id}" ${s.id==slotId?'selected':''}>${s.label} (${s.buoi})</option>`).join('')}</select>
+      ${hasRegistered
+        ? '<small class="hint">Buổi học đã có sinh viên đăng ký — muốn đổi khung giờ phải hủy hết đăng ký trước.</small>'
+        : '<small class="hint">Có thể đổi sang khung giờ khác trong cùng ngày học ở trên.</small>'}
+    </div>
+    <div class="field" style="margin-bottom:10px;">
+      <label>Ngành</label>
+      <select id="schedNganh" ${(hasRegistered || !canPickNganh)?'disabled':''} onchange="onSchedNganhChange()">${NGANH_LIST.map(n=>`<option value="${n}" ${n===initialNganh?'selected':''}>${n}</option>`).join('')}</select>
+      ${hasRegistered
+        ? '<small class="hint">Buổi học đã có sinh viên đăng ký — không thể chuyển sang ngành khác. Hãy hủy đăng ký trước.</small>'
+        : (canPickNganh
+          ? '<small class="hint">Chọn đúng ngành của buổi học này — vì nhiều ngành có thể trùng tên môn học nhưng nội dung khác nhau, mỗi buổi học chỉ thuộc về đúng 1 ngành.</small>'
+          : `<small class="hint">Tài khoản của bạn chỉ quản lý ngành ${initialNganh}.</small>`)}
+    </div>
+    <div class="field" style="margin-bottom:10px;">
+      <label>Tên môn học</label>
+      <input id="schedSubject" list="subjectDatalist" placeholder="Nhập hoặc chọn tên môn học..." value="${cls ? cls.subject : ''}">
+      <datalist id="subjectDatalist">${subjectOptions.map(s=>`<option value="${s}">`).join('')}</datalist>
+    </div>
+    <div class="field" style="margin-bottom:10px;">
+      <label>Nội dung môn học</label>
+      <textarea id="schedContent" rows="3" placeholder="Mô tả nội dung thực hành của buổi học...">${cls ? (cls.content||'') : ''}</textarea>
+    </div>
+    <div class="field" style="margin-bottom:10px;">
+      <label>Phòng</label>
+      <input id="schedRoom" value="${cls ? cls.room : ''}">
+    </div>
+    <div class="field" style="margin-bottom:10px;">
+      <label>Giảng viên phụ trách</label>
+      <input id="schedTeacher" value="${cls ? cls.teacher : ''}">
+    </div>
+    <p style="font-size:12px;color:var(--muted);margin:0 0 14px;">Sức chứa: tối đa <b>10 sinh viên</b>/buổi (cố định theo quy định, không thay đổi được).</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn" onclick="saveScheduleEditor('${cellDateISO}',${slotId})">${isNew?'Tạo buổi học':'Lưu thay đổi'}</button>
+      ${!isNew ? `<button class="btn danger" onclick="deleteScheduleEntry('${cellDateISO}',${slotId})">Xóa buổi học</button>` : ''}
+    </div>
+  `);
+}
+window.onSchedNganhChange = function(){
+  const n = document.getElementById('schedNganh').value;
+  const opts = Array.from(new Set([...(SUBJECTS_BY_NGANH[n]||[]), ...Object.values(schedule[n]||{}).map(c=>c.subject)]));
+  document.getElementById('subjectDatalist').innerHTML = opts.map(s=>`<option value="${s}">`).join('');
+};
+async function saveScheduleEditor(cellDateISO, slotId){
+  const origNganh = currentNganh;
+  const origKey = `${cellDateISO}_${slotId}`;
+  const existing = schedule[origNganh][origKey];
+  const isNew = !existing;
+  const subject = document.getElementById('schedSubject').value.trim();
+  const room = document.getElementById('schedRoom').value.trim();
+  if(!subject) return toast('Vui lòng nhập tên môn học');
+  if(!room) return toast('Vui lòng nhập phòng');
+  const newSlotId = parseInt(document.getElementById('schedSlot').value);
+  const targetNganh = document.getElementById('schedNganh').value;
+  const content = document.getElementById('schedContent').value.trim();
+  const teacher = document.getElementById('schedTeacher').value.trim();
+
+  let jumpToDateISO = null;
+  try{
+    if(!isNew){
+      await apiFetch(`/schedule/${existing.id}`, {method:'PUT', body:JSON.stringify({nganh:targetNganh, slotId:newSlotId, subject, content, room, teacher})});
+      toast(targetNganh !== origNganh
+        ? `Đã cập nhật lịch học (chuyển sang ngành ${targetNganh})`
+        : (newSlotId!==slotId ? 'Đã cập nhật lịch học (đổi sang khung giờ khác)' : 'Đã cập nhật lịch học'));
+      if(targetNganh !== origNganh) jumpToDateISO = cellDateISO;
+    } else {
+      const newDateISO = document.getElementById('schedDate').value || cellDateISO;
+      await apiFetch('/schedule', {method:'POST', body:JSON.stringify({nganh:targetNganh, dateISO:newDateISO, slotId:newSlotId, subject, content, room, teacher})});
+      toast(targetNganh !== origNganh ? `Đã tạo buổi học mới cho ngành ${targetNganh}` : 'Đã tạo buổi học mới');
+      if(targetNganh !== origNganh) jumpToDateISO = newDateISO;
+    }
+  }catch(e){ return toast(e.message); }
+
+  if(jumpToDateISO){
+    await switchToNganh(targetNganh, Math.max(WEEK_OFFSET_MIN, Math.min(WEEK_OFFSET_MAX, weekOffsetForISO(jumpToDateISO))));
+  } else {
+    await loadNganhData(origNganh);
+  }
+  closeModal();
+  render();
+}
+// Tính weekOffset (so với tuần hiện tại) của tuần chứa 1 ngày ISO bất kỳ — dùng để tự nhảy tới đúng tuần sau khi tạo lịch hàng loạt
+function weekOffsetForISO(iso){
+  const targetMonday = getMonday(new Date(iso+'T00:00:00'));
+  return Math.round((targetMonday - MONDAY) / (7*24*60*60*1000));
+}
+// Popup tạo lịch học hàng loạt theo khoảng ngày — Quản lý học tập điền 1 lần, hệ thống tự tạo buổi học cho từng ngày làm việc trong khoảng
+window.openBulkCreateModal = function(){
+  const initialNganh = currentNganh;
+  const canPickNganh = ROLES_XEM_MOI_NGANH.includes(currentUser.role);
+  const subjectOptions = Array.from(new Set([...(SUBJECTS_BY_NGANH[initialNganh]||[]), ...Object.values(schedule[initialNganh]||{}).map(c=>c.subject)]));
+  openModal(`
+    <button class="close" onclick="closeModal()">✕</button>
+    <h3>Tạo lịch học hàng loạt</h3>
+    <p style="margin:0 0 14px;color:var(--muted);font-size:13px;">Dùng khi có sẵn kế hoạch dạng "Bài học – Ngày học" (ví dụ: 1 bài học kéo dài từ 19/8 đến 20/8). Điền 1 lần, hệ thống tự tạo buổi học cho từng ngày làm việc (Thứ 2 - Thứ 6) trong khoảng, tại cùng 1 khung giờ đã chọn.</p>
+    <div class="field" style="margin-bottom:10px;">
+      <label>Từ ngày</label>
+      <input id="bulkFrom" type="date">
+    </div>
+    <div class="field" style="margin-bottom:10px;">
+      <label>Đến ngày</label>
+      <input id="bulkTo" type="date">
+    </div>
+    <div class="field" style="margin-bottom:10px;">
+      <label>Slot học (khung giờ)</label>
+      <select id="bulkSlot">${SLOTS.map(s=>`<option value="${s.id}">${s.label} (${s.buoi})</option>`).join('')}</select>
+    </div>
+    <div class="field" style="margin-bottom:10px;">
+      <label>Ngành</label>
+      <select id="bulkNganh" ${canPickNganh?'':'disabled'} onchange="onBulkNganhChange()">${NGANH_LIST.map(n=>`<option value="${n}" ${n===initialNganh?'selected':''}>${n}</option>`).join('')}</select>
+      <small class="hint">${canPickNganh
+        ? 'Chọn ngành cho cả loạt buổi học này — vì nhiều ngành có thể trùng tên môn học nhưng nội dung khác nhau, mỗi buổi học chỉ thuộc về đúng 1 ngành.'
+        : `Tài khoản của bạn chỉ quản lý ngành ${initialNganh}.`}</small>
+    </div>
+    <div class="field" style="margin-bottom:10px;">
+      <label>Tên môn học / Bài học</label>
+      <input id="bulkSubject" list="subjectDatalistBulk">
+      <datalist id="subjectDatalistBulk">${subjectOptions.map(s=>`<option value="${s}">`).join('')}</datalist>
+    </div>
+    <div class="field" style="margin-bottom:10px;">
+      <label>Nội dung môn học</label>
+      <textarea id="bulkContent" rows="3" placeholder="Mô tả nội dung thực hành của bài học..."></textarea>
+    </div>
+    <div class="field" style="margin-bottom:10px;">
+      <label>Phòng học</label>
+      <input id="bulkRoom">
+    </div>
+    <div class="field" style="margin-bottom:10px;">
+      <label>Giảng viên phụ trách <span class="hint">(không bắt buộc)</span></label>
+      <input id="bulkTeacher">
+    </div>
+    <p style="font-size:12px;color:var(--muted);margin:0 0 14px;">Sức chứa mỗi buổi: cố định tối đa 10 sinh viên. Ngày cuối tuần (Thứ 7, CN) trong khoảng tự động bỏ qua; ngày/khung giờ đã có sẵn lịch cũng được bỏ qua (không ghi đè) và sẽ được báo lại số lượng.</p>
+    <button class="btn" onclick="bulkCreateSchedule()">Tạo lịch hàng loạt</button>
+  `);
+};
+window.onBulkNganhChange = function(){
+  const n = document.getElementById('bulkNganh').value;
+  const opts = Array.from(new Set([...(SUBJECTS_BY_NGANH[n]||[]), ...Object.values(schedule[n]||{}).map(c=>c.subject)]));
+  document.getElementById('subjectDatalistBulk').innerHTML = opts.map(s=>`<option value="${s}">`).join('');
+};
+window.bulkCreateSchedule = async function(){
+  const fromISO = document.getElementById('bulkFrom').value;
+  const toISO = document.getElementById('bulkTo').value;
+  const slotId = parseInt(document.getElementById('bulkSlot').value);
+  const targetNganh = document.getElementById('bulkNganh').value;
+  const subject = document.getElementById('bulkSubject').value.trim();
+  const room = document.getElementById('bulkRoom').value.trim();
+  const content = document.getElementById('bulkContent').value.trim();
+  const teacher = document.getElementById('bulkTeacher').value.trim();
+  if(!fromISO || !toISO) return toast('Vui lòng chọn Từ ngày và Đến ngày');
+  if(fromISO > toISO) return toast('"Từ ngày" phải trước hoặc bằng "Đến ngày"');
+  if(!subject) return toast('Vui lòng nhập tên môn học / bài học');
+  if(!room) return toast('Vui lòng nhập phòng học');
+
+  let result;
+  try{
+    result = await apiFetch('/schedule/bulk', {method:'POST', body:JSON.stringify({nganh:targetNganh, fromISO, toISO, slotId, subject, content, room, teacher})});
+  }catch(e){ return toast(e.message); }
+
+  if(result.created===0){
+    toast(result.skippedExisting>0
+      ? `Không tạo được buổi nào — cả ${result.skippedExisting} ngày làm việc trong khoảng đã có lịch tại khung giờ này ở ngành ${targetNganh}.`
+      : 'Không có ngày làm việc (Thứ 2 - Thứ 6) nào trong khoảng đã chọn.');
+    return;
+  }
+  await switchToNganh(targetNganh, Math.max(WEEK_OFFSET_MIN, Math.min(WEEK_OFFSET_MAX, weekOffsetForISO(fromISO))));
+  closeModal();
+  toast(`Đã tạo ${result.created} buổi học cho ngành ${targetNganh}${result.skippedExisting>0?`, bỏ qua ${result.skippedExisting} buổi đã có lịch`:''}.`);
+  render();
+};
+async function deleteScheduleEntry(dateISO, slotId){
+  const key = `${dateISO}_${slotId}`;
+  const cls = curSchedule()[key];
+  if(!cls) return;
+  try{
+    await apiFetch(`/schedule/${cls.id}`, {method:'DELETE'});
+  }catch(e){ return toast(e.message); }
+  await loadNganhData(currentNganh);
+  toast('Đã xóa buổi học');
+  closeModal();
+  render();
+}
+
+/* ============================== CÁC MÀN HÌNH THEO ROLE ============================== */
+function screenStudent(){
+  const isAdminPreview = currentUser.role === 'ADMIN';
+  if(!currentStudent || currentStudent.nganh !== currentNganh) currentStudent = curStudents()[0] || null;
+  if(!currentStudent){
+    return `<div class="card"><h2>Đăng ký tự học</h2><div class="empty">Ngành ${currentNganh} chưa có sinh viên nào — hãy thêm sinh viên (đăng ký tài khoản) trước.</div></div>`;
+  }
+  const studentOptions = curStudents().map(s=>`<option value="${s.ma_sv}" ${s.ma_sv===currentStudent.ma_sv?'selected':''}>${s.ma_sv} — ${s.ten_sv}</option>`).join('');
+  const myRegs = [];
+  Object.keys(curSchedule()).forEach(key=>{
+    const cls = curSchedule()[key];
+    if(cls.registered.some(r=>r.ma_sv===currentStudent.ma_sv)){
+      const idx = key.lastIndexOf('_');
+      const dateISO = key.slice(0,idx), slotId = parseInt(key.slice(idx+1));
+      myRegs.push({dateISO, slotId, s:SLOTS.find(x=>x.id===slotId), cls});
+    }
+  });
+  myRegs.sort((a,b)=> a.dateISO===b.dateISO ? a.slotId-b.slotId : a.dateISO.localeCompare(b.dateISO));
+
+  return `
+  <div class="card">
+    <h2>Đăng ký tự học</h2>
+    <div class="desc">${isAdminPreview ? 'Chế độ Quản trị viên: chọn 1 sinh viên bất kỳ để xem/thao tác thay.' : 'Điền thông tin và chọn slot còn trống trên lịch để đăng ký.'} Dùng nút điều hướng tuần để đăng ký cho các tuần sắp tới.</div>
+    <div class="form-row">
+      ${isAdminPreview ? `<div class="field"><label>Sinh viên (xem thay)</label>
+        <select id="studentSel" onchange="onStudentChange(this.value)">${studentOptions}</select>
+      </div>` : ''}
+      <div class="field"><label>Mã SV</label><input value="${currentStudent.ma_sv}" disabled></div>
+      <div class="field"><label>Tên SV</label><input value="${currentStudent.ten_sv}" disabled></div>
+      <div class="field"><label>Tổ / Lớp</label><input value="${currentStudent.to_lop}" disabled></div>
+    </div>
+    <small class="hint">Nhấp vào 1 ô còn chỗ trên lịch bên dưới để đăng ký. Ô đỏ = đã đầy 10 người, hệ thống tự khóa và không cho đăng ký thêm.</small>
+    ${renderWeekGrid({clickable:true, roleForClick:'SINH_VIEN'})}
+  </div>
+  <div class="card">
+    <h2>Lịch đã đăng ký của tôi</h2>
+    <div class="desc">${currentStudent.ten_sv} — ${myRegs.length} buổi đã đăng ký (tất cả các tuần)</div>
+    ${myRegs.length===0 ? '<div class="empty">Chưa đăng ký buổi nào</div>' :
+      `<table><thead><tr><th>Thứ</th><th>Khung giờ</th><th>Môn học</th><th>Phòng</th><th></th></tr></thead><tbody>
+      ${myRegs.map(r=>`<tr><td>${dowLabelFromISO(r.dateISO)} ${fmtDateFromISO(r.dateISO)}</td><td>${r.s.label}</td><td>${r.cls.subject}</td><td>${r.cls.room}</td>
+        <td><button class="btn danger" style="padding:5px 10px;font-size:12px;" onclick="cancelStudent('${r.dateISO}',${r.slotId},'${currentStudent.ma_sv}')">Hủy đăng ký</button></td></tr>`).join('')}
+      </tbody></table>`}
+  </div>`;
+}
+window.onStudentChange = function(ma_sv){
+  currentStudent = curStudents().find(s=>s.ma_sv===ma_sv);
+  render();
+};
+// Xử lý khi bấm vào 1 ô slot trên lưới tuần: SV -> đăng ký nhanh; role khác -> mở modal quản trị
+function handleSlotClick(dateISO, slotId, role){
+  if(role==='SINH_VIEN'){
+    const cls = curSchedule()[`${dateISO}_${slotId}`];
+    const status = slotStatus(cls);
+    const slot = SLOTS.find(s=>s.id==slotId);
+    if(status==='full') return toast('Slot đã đầy 10 người — đã tự động khóa');
+    if(status==='locked-manual') return toast('Slot đã bị khóa bởi Cô trưởng bộ môn');
+    if(cls.registered.some(r=>r.ma_sv===currentStudent.ma_sv)) return toast('Bạn đã đăng ký slot này rồi');
+    openModal(`
+      <button class="close" onclick="closeModal()">✕</button>
+      <h3>Xác nhận đăng ký</h3>
+      <p style="font-size:13px;color:var(--muted);">${dowLabelFromISO(dateISO)} ${fmtDateFromISO(dateISO)} · ${slot.label} · ${cls.subject}</p>
+      <div class="form-row">
+        <div class="field"><label>Mã SV</label><input value="${currentStudent.ma_sv}" disabled></div>
+        <div class="field"><label>Tên SV</label><input value="${currentStudent.ten_sv}" disabled></div>
+        <div class="field"><label>Tổ/Lớp</label><input value="${currentStudent.to_lop}" disabled></div>
+      </div>
+      <button class="btn" onclick="registerStudent('${dateISO}',${slotId},currentStudent);closeModal();">Xác nhận đăng ký</button>
+    `);
+    return;
+  }
+  const cls = curSchedule()[`${dateISO}_${slotId}`];
+  if(!cls){
+    // Ô trống: Quản lý / Cô trưởng bộ môn thiết lập buổi học mới
+    openScheduleEditor(dateISO, slotId);
+    return;
+  }
+  openSlotDetailModal(dateISO, slotId, role);
+}
+window.handleSlotClick = handleSlotClick;
+window.showSlotDetail = openSlotDetailModal; // alias dùng trong modal chi tiết (nút Hủy gọi lại)
+
+function screenTruongBoMon(){
+  const weekDates = getWeekDates(weekOffset);
+  const weekKeys = new Set();
+  weekDates.forEach(d=>{ const iso=isoDate(d); SLOTS.forEach(s=>weekKeys.add(`${iso}_${s.id}`)); });
+  const weekEntries = Object.keys(curSchedule()).filter(k=>weekKeys.has(k)).map(k=>curSchedule()[k]);
+  const totalSlots = weekEntries.length;
+  const fullSlots = weekEntries.filter(c=>c.registered.length>=c.capacity).length;
+  const totalReg = weekEntries.reduce((a,c)=>a+c.registered.length,0);
+  const totalEntriesAllWeeks = Object.keys(curSchedule()).length;
+  return `
+  <div class="stat-row">
+    <div class="stat"><div class="num">${totalSlots}</div><div class="lbl">Slot đang mở (tuần đang xem)</div></div>
+    <div class="stat"><div class="num">${fullSlots}</div><div class="lbl">Slot đã đầy (tự khóa)</div></div>
+    <div class="stat"><div class="num">${totalReg}</div><div class="lbl">Lượt đăng ký (tuần đang xem)</div></div>
+    <div class="stat"><div class="num">${totalEntriesAllWeeks}</div><div class="lbl">Tổng buổi học đã thiết lập (mọi tuần)</div></div>
+  </div>
+  <div class="card">
+    <h2>Xem &amp; sửa lịch học</h2>
+    <div class="desc">Dùng nút điều hướng bên dưới để xem/sửa lịch các tuần tiếp theo. Nhấp vào 1 slot để xem danh sách, khóa/mở thủ công, hoặc sửa lịch học.</div>
+    ${renderWeekGrid({clickable:true, roleForClick:'TRUONG_BO_MON'})}
+  </div>`;
+}
+
+function screenCoVan(){
+  return `
+  <div class="card">
+    <h2>Lịch tuần (chỉ xem)</h2>
+    <div class="desc">Lịch tự học ngành ${currentNganh} — chỉ xem. Dùng nút điều hướng tuần bên dưới để xem các tuần khác.</div>
+    ${renderWeekGrid({clickable:false})}
+  </div>`;
+}
+
+function screenQuanLy(){
+  return `
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;">
+      <div>
+        <h2>Sắp xếp lịch học</h2>
+        <div class="desc">Nhấp vào ô trống ("+ Thiết lập lịch học") để tạo từng buổi học riêng lẻ, hoặc bấm nút bên phải để tạo hàng loạt theo khoảng ngày. Nhấp vào 1 buổi đã có để sửa hoặc xóa.</div>
+      </div>
+      <button class="btn" style="flex:0 0 auto;" onclick="openBulkCreateModal()">+ Tạo lịch học hàng loạt</button>
+    </div>
+    ${renderWeekGrid({clickable:true, roleForClick:'TRUONG_BO_MON'})}
+  </div>
+  <div class="card">
+    <h2>Kho dụng cụ thực hành</h2>
+    <div class="desc">Quản lý học tập tự thêm loại dụng cụ mới vào kho — tên dụng cụ do Quản lý điền, không giới hạn danh mục cố định. Kho dụng cụ riêng cho từng ngành.</div>
+    ${curEquipment().length ? `<table><thead><tr><th>Tên dụng cụ</th><th>Tổng số lượng</th><th>Đã giao</th><th>Còn lại</th><th>Tình trạng</th></tr></thead><tbody>
+    ${curEquipment().map(e=>`<tr><td>${e.ten}</td><td>${e.tong}</td><td>${e.giao}</td><td>${e.tong-e.giao}</td><td>${e.tinhTrang||''}</td></tr>`).join('')}
+    </tbody></table>` : `<div class="empty">Kho dụng cụ ngành ${currentNganh} chưa có dụng cụ nào — thêm mới bên dưới.</div>`}
+    <div class="form-row" style="margin-top:14px;align-items:flex-end;">
+      <div class="field"><label>Tên dụng cụ mới</label><input id="newEqName"></div>
+      <div class="field"><label>Tổng số lượng</label><input id="newEqQty" type="number" value="10" min="1"></div>
+      <div class="field"><label>Tình trạng</label><input id="newEqCond" value="Tốt"></div>
+      <div class="field" style="flex:0 0 auto;"><button class="btn secondary" onclick="addNewEquipmentType()">+ Thêm vào kho</button></div>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Giao dụng cụ cho từng thành viên trong lớp</h2>
+    <div class="desc">Chọn 1 buổi học đã có sinh viên đăng ký, sau đó giao dụng cụ cho từng sinh viên — hoặc giao nhanh cùng 1 loại/số lượng cho cả lớp.</div>
+    ${renderEquipSlotPicker()}
+    ${selectedEquipKey ? renderEquipStudentPanel() : ''}
+  </div>`;
+}
+window.addNewEquipmentType = async function(){
+  const ten = document.getElementById('newEqName').value.trim();
+  if(!ten) return toast('Vui lòng nhập tên dụng cụ');
+  if(curEquipment().some(e=>e.ten.toLowerCase()===ten.toLowerCase())) return toast('Dụng cụ này đã có trong kho');
+  const tong = parseInt(document.getElementById('newEqQty').value)||1;
+  const tinhTrang = document.getElementById('newEqCond').value.trim() || 'Tốt';
+  try{
+    await apiFetch('/equipment', {method:'POST', body:JSON.stringify({nganh:currentNganh, ten, tong, tinhTrang})});
+  }catch(e){ return toast(e.message); }
+  await loadNganhData(currentNganh);
+  toast(`Đã thêm "${ten}" vào kho dụng cụ`);
+  render();
+};
+// Quét TẤT CẢ các tuần (không chỉ tuần đang xem) để Quản lý có thể giao dụng cụ cho bất kỳ buổi học nào đã có SV đăng ký
+function getSlotsWithStudents(){
+  const out = [];
+  Object.keys(curSchedule()).forEach(key=>{
+    const cls = curSchedule()[key];
+    if(cls.registered.length>0){
+      const idx = key.lastIndexOf('_');
+      const dateISO = key.slice(0,idx), slotId = parseInt(key.slice(idx+1));
+      out.push({key, dateISO, slotId, cls});
+    }
+  });
+  out.sort((a,b)=> a.dateISO===b.dateISO ? a.slotId-b.slotId : a.dateISO.localeCompare(b.dateISO));
+  return out;
+}
+function slotLabelFor(dateISO, slotId, cls){
+  const s = SLOTS.find(x=>x.id==slotId);
+  return `${dowLabelFromISO(dateISO)} ${fmtDateFromISO(dateISO)} · ${s.label} · ${cls.subject}`;
+}
+function renderEquipSlotPicker(){
+  const opts = getSlotsWithStudents();
+  return `<div class="field" style="max-width:560px;margin-bottom:14px;">
+    <label>Chọn buổi học (lớp) đã có sinh viên đăng ký — mọi tuần</label>
+    <select id="eqSlotSel" onchange="onEquipSlotChange(this.value)">
+      <option value="">-- Chọn buổi học --</option>
+      ${opts.map(o=>`<option value="${o.key}" ${selectedEquipKey===o.key?'selected':''}>${slotLabelFor(o.dateISO,o.slotId,o.cls)} (${o.cls.registered.length} SV)</option>`).join('')}
+    </select>
+    ${opts.length===0 ? '<small class="hint">Chưa có buổi học nào có sinh viên đăng ký.</small>' : ''}
+  </div>`;
+}
+window.onEquipSlotChange = function(key){
+  selectedEquipKey = key || null;
+  render();
+};
+function renderEquipStudentPanel(){
+  const cls = curSchedule()[selectedEquipKey];
+  if(!cls) return '';
+  const idx = selectedEquipKey.lastIndexOf('_');
+  const dateISO = selectedEquipKey.slice(0,idx), slotId = parseInt(selectedEquipKey.slice(idx+1));
+  const eqOptions = curEquipment().map(e=>`<option value="${e.id}">${e.ten}</option>`).join('');
+  return `
+  <div style="background:#f9fafb;border:1px solid var(--line);border-radius:8px;padding:14px;margin-bottom:14px;">
+    <div class="form-row" style="align-items:flex-end;margin-bottom:0;">
+      <div class="field"><label>Giao nhanh — Dụng cụ</label><select id="eqBulkSel">${eqOptions}</select></div>
+      <div class="field"><label>Số lượng / người</label><input id="eqBulkQty" type="number" value="1" min="1"></div>
+      <div class="field" style="flex:0 0 auto;">
+        <button class="btn secondary" onclick="bulkAssignEquip()">Giao cho cả lớp (${cls.registered.length} SV)</button>
+      </div>
+    </div>
+  </div>
+  <table><thead><tr><th>Mã SV</th><th>Tên SV</th><th>Tổ/Lớp</th><th>Đã giao (có thể nhiều loại)</th><th>Thêm dụng cụ</th><th>SL</th><th></th></tr></thead><tbody>
+    ${cls.registered.map(sv=>{
+      const items = curEquipAssignments().filter(a=>a.slotKey===selectedEquipKey && a.ma_sv===sv.ma_sv);
+      const tagsHtml = items.length
+        ? items.map(a=>`<span class="eq-tag">${a.ten} ×${a.soLuong}<button title="Xóa" onclick="removeEquipAssignment(${a.id})">✕</button></span>`).join('')
+        : '<span class="hint">Chưa có</span>';
+      return `<tr>
+      <td>${sv.ma_sv}</td><td>${sv.ten_sv}</td><td>${sv.to_lop}</td>
+      <td>${tagsHtml}</td>
+      <td><select id="eqSel_${sv.ma_sv}">${eqOptions}</select></td>
+      <td><input id="eqQty_${sv.ma_sv}" type="number" value="1" min="1" style="width:60px;"></td>
+      <td><button class="btn" style="padding:6px 10px;font-size:12px;" onclick="assignEquipToStudent(${sv.id},'${sv.ma_sv}','${sv.ten_sv.replace(/'/g,"\\'")}')">+ Thêm</button></td>
+    </tr>`;
+    }).join('')}
+  </tbody></table>`;
+}
+window.removeEquipAssignment = async function(id){
+  const removed = curEquipAssignments().find(a=>a.id===id);
+  if(!removed) return;
+  try{
+    await apiFetch(`/equipment-assignments/${id}`, {method:'DELETE'});
+  }catch(e){ return toast(e.message); }
+  await loadNganhData(currentNganh);
+  toast(`Đã bỏ "${removed.ten}" của ${removed.ten_sv}`);
+  render();
+};
+window.bulkAssignEquip = async function(){
+  const cls = curSchedule()[selectedEquipKey];
+  if(!cls) return;
+  const equipmentId = parseInt(document.getElementById('eqBulkSel').value);
+  const qty = parseInt(document.getElementById('eqBulkQty').value)||1;
+  const eq = curEquipment().find(e=>e.id===equipmentId);
+  try{
+    await apiFetch('/equipment-assignments/bulk', {method:'POST', body:JSON.stringify({scheduleEntryId:cls.id, equipmentId, soLuong:qty})});
+  }catch(e){ return toast(e.message); }
+  await loadNganhData(currentNganh);
+  toast(`Đã giao ${eq?eq.ten:''} cho ${cls.registered.length} sinh viên`);
+  render();
+};
+window.assignEquipToStudent = async function(studentId, ma_sv, ten_sv){
+  const cls = curSchedule()[selectedEquipKey];
+  if(!cls) return;
+  const equipmentId = parseInt(document.getElementById('eqSel_'+ma_sv).value);
+  const qty = parseInt(document.getElementById('eqQty_'+ma_sv).value)||1;
+  const eq = curEquipment().find(e=>e.id===equipmentId);
+  try{
+    await apiFetch('/equipment-assignments', {method:'POST', body:JSON.stringify({scheduleEntryId:cls.id, studentId, equipmentId, soLuong:qty})});
+  }catch(e){ return toast(e.message); }
+  await loadNganhData(currentNganh);
+  toast(`Đã giao thêm ${eq?eq.ten:''} cho ${ten_sv}`);
+  render();
+};
+
+/* ============================== QUẢN LÝ TÀI KHOẢN (chỉ Quản trị viên) ============================== */
+function screenAdminAccounts(){
+  const allAccounts = adminAccountsCache;
+  const rows = allAccounts.map(a=>`
+    <tr>
+      <td>${a.username}${a.username===currentUser.username?' <span class="hint">(bạn)</span>':''}</td>
+      <td>${a.hoTen}</td>
+      <td>${ROLE_LABELS[a.role]}</td>
+      <td>${a.nganh || '<span class="hint">— (mọi ngành)</span>'}</td>
+      <td><span class="badge ${a.active!==false?'open':'locked'}">${a.active!==false?'Hoạt động':'Đã khóa'}</span></td>
+      <td style="white-space:nowrap;">
+        <button class="btn secondary" style="padding:4px 8px;font-size:11px;" onclick="openEditAccountModal('${a.kind}','${a.username}')">Sửa</button>
+        <button class="btn ${a.active!==false?'danger':''}" style="padding:4px 8px;font-size:11px;" onclick="toggleAccountActive('${a.kind}','${a.username}')">${a.active!==false?'Khóa':'Mở khóa'}</button>
+        <button class="btn danger" style="padding:4px 8px;font-size:11px;" onclick="deleteAccount('${a.kind}','${a.username}')">Xóa</button>
+      </td>
+    </tr>`).join('');
+  return `
+  <div class="card">
+    <h2>Quản lý tài khoản</h2>
+    <div class="desc">Quyền Quản trị viên: xem, tạo, sửa, khóa/mở khóa và xóa tài khoản của tất cả vai trò (Cô trưởng bộ môn, Cố vấn học tập, Quản lý học tập, Sinh viên, Quản trị viên), thuộc mọi ngành. Tổng cộng ${allAccounts.length} tài khoản.</div>
+    <table><thead><tr><th>Tên đăng nhập</th><th>Họ tên</th><th>Vai trò</th><th>Ngành</th><th>Trạng thái</th><th></th></tr></thead>
+    <tbody>${rows}</tbody></table>
+  </div>
+  <div class="card">
+    <h2>Cấp tài khoản mới</h2>
+    <div class="desc">Cấp tài khoản cho bất kỳ vai trò nào, thuộc bất kỳ ngành nào — kể cả cấp thêm Quản trị viên khác.</div>
+    <div class="form-row">
+      <div class="field"><label>Vai trò</label>
+        <select id="newAccRole" onchange="onNewAccRoleChange()">
+          <option value="SINH_VIEN" selected>Sinh viên</option>
+          <option value="TRUONG_BO_MON">Cô trưởng bộ môn</option>
+          <option value="CO_VAN">Cố vấn học tập</option>
+          <option value="QUAN_LY">Quản lý học tập</option>
+          <option value="ADMIN">Quản trị viên</option>
+        </select>
+      </div>
+      <div class="field" id="newAccNganhWrap"><label>Ngành</label>
+        <select id="newAccNganh">${NGANH_LIST.map(n=>`<option>${n}</option>`).join('')}</select>
+      </div>
+    </div>
+    <div class="form-row" id="newAccStudentFields">
+      <div class="field"><label>Mã SV</label><input id="newAccMaSv"></div>
+      <div class="field"><label>Tổ / Lớp</label><input id="newAccToLop"></div>
+    </div>
+    <div class="form-row">
+      <div class="field"><label>Họ tên</label><input id="newAccHoTen"></div>
+      <div class="field"><label>Tên đăng nhập</label><input id="newAccUser"></div>
+      <div class="field"><label>Mật khẩu</label><input id="newAccPass" placeholder="tối thiểu 4 ký tự"></div>
+    </div>
+    <button class="btn" onclick="createAccount()">Tạo tài khoản</button>
+  </div>`;
+}
+window.onNewAccRoleChange = function(){
+  const role = document.getElementById('newAccRole').value;
+  document.getElementById('newAccNganhWrap').style.display = role==='ADMIN' ? 'none' : '';
+  document.getElementById('newAccStudentFields').style.display = role==='SINH_VIEN' ? 'flex' : 'none';
+};
+window.createAccount = async function(){
+  const role = document.getElementById('newAccRole').value;
+  const hoTen = document.getElementById('newAccHoTen').value.trim();
+  const username = document.getElementById('newAccUser').value.trim().toLowerCase();
+  const password = document.getElementById('newAccPass').value;
+  if(!hoTen) return toast('Vui lòng nhập họ tên');
+  if(!username) return toast('Vui lòng nhập tên đăng nhập');
+  if(password.length < 4) return toast('Mật khẩu cần tối thiểu 4 ký tự');
+  const body = {role, hoTen, username, password};
+  if(role === 'SINH_VIEN'){
+    body.nganh = document.getElementById('newAccNganh').value;
+    body.ma_sv = document.getElementById('newAccMaSv').value.trim().toUpperCase();
+    body.to_lop = document.getElementById('newAccToLop').value.trim();
+    if(!body.ma_sv || !body.to_lop) return toast('Vui lòng nhập Mã SV và Tổ/Lớp');
+  } else if(role !== 'ADMIN'){
+    body.nganh = document.getElementById('newAccNganh').value;
+  }
+  try{
+    await apiFetch('/admin/accounts', {method:'POST', body:JSON.stringify(body)});
+  }catch(e){ return toast(e.message); }
+  await loadAdminAccounts();
+  toast(`Đã cấp tài khoản ${username} (${ROLE_LABELS[role]})`);
+  render();
+};
+window.openEditAccountModal = function(kind, username){
+  const a = adminAccountsCache.find(x=>x.username===username && x.kind===kind);
+  if(!a) return;
+  const showNganh = kind==='student' || a.role!=='ADMIN';
+  openModal(`
+    <button class="close" onclick="closeModal()">✕</button>
+    <h3>Sửa tài khoản — ${username}</h3>
+    <div class="field" style="margin-bottom:10px;"><label>Họ tên</label><input id="editAccHoTen" value="${a.hoTen}"></div>
+    ${showNganh ? `<div class="field" style="margin-bottom:10px;"><label>Ngành</label><select id="editAccNganh">${NGANH_LIST.map(n=>`<option ${n===a.nganh?'selected':''}>${n}</option>`).join('')}</select></div>` : ''}
+    <div class="field" style="margin-bottom:14px;"><label>Mật khẩu mới <span class="hint">(để trống nếu không đổi)</span></label><input id="editAccPass" placeholder="••••••"></div>
+    <button class="btn" onclick="saveEditAccount('${kind}','${username}')">Lưu thay đổi</button>
+  `);
+};
+window.saveEditAccount = async function(kind, username){
+  const hoTen = document.getElementById('editAccHoTen').value.trim();
+  const nganhEl = document.getElementById('editAccNganh');
+  const pass = document.getElementById('editAccPass').value;
+  if(!hoTen) return toast('Vui lòng nhập họ tên');
+  if(pass && pass.length < 4) return toast('Mật khẩu mới cần tối thiểu 4 ký tự');
+  const body = {hoTen};
+  if(nganhEl) body.nganh = nganhEl.value;
+  if(pass) body.password = pass;
+  try{
+    await apiFetch(`/admin/accounts/${encodeURIComponent(username)}`, {method:'PUT', body:JSON.stringify(body)});
+  }catch(e){ return toast(e.message); }
+  if(currentUser.username===username){
+    currentUser.hoTen = hoTen;
+    if(nganhEl) currentUser.nganh = nganhEl.value;
+  }
+  await loadAdminAccounts();
+  toast('Đã lưu thay đổi tài khoản');
+  closeModal();
+  render();
+};
+window.toggleAccountActive = async function(kind, username){
+  if(currentUser.username === username) return toast('Không thể tự khóa tài khoản đang đăng nhập');
+  try{
+    await apiFetch(`/admin/accounts/${encodeURIComponent(username)}/toggle-active`, {method:'POST'});
+  }catch(e){ return toast(e.message); }
+  await loadAdminAccounts();
+  toast('Đã cập nhật trạng thái tài khoản');
+  render();
+};
+window.deleteAccount = async function(kind, username){
+  if(currentUser.username === username) return toast('Không thể tự xóa tài khoản đang đăng nhập');
+  try{
+    await apiFetch(`/admin/accounts/${encodeURIComponent(username)}`, {method:'DELETE'});
+  }catch(e){ return toast(e.message); }
+  await loadAdminAccounts();
+  toast('Đã xóa tài khoản');
+  render();
+};
+
+/* ============================== MAIN RENDER ============================== */
+function render(){
+  document.getElementById('appTitle').textContent = currentUser ? `Đăng ký Tự học — Ngành ${currentNganh}` : 'Đăng ký Tự học';
+  renderHeaderRight();
+  const app = document.getElementById('app');
+  if(!currentUser){
+    app.innerHTML = authScreen==='register' ? screenRegister() : screenLogin();
+    return;
+  }
+  if(currentUser.role==='ADMIN' && currentRole==='ADMIN_ACCOUNTS'){ app.innerHTML = screenAdminAccounts(); return; }
+  if(currentRole==='SINH_VIEN') app.innerHTML = screenStudent();
+  else if(currentRole==='TRUONG_BO_MON') app.innerHTML = screenTruongBoMon();
+  else if(currentRole==='CO_VAN') app.innerHTML = screenCoVan();
+  else if(currentRole==='QUAN_LY') app.innerHTML = screenQuanLy();
+}
+
+// Vẽ lại toàn bộ khối bên phải header: khi CHƯA đăng nhập thì để trống; Quản trị viên có đủ bộ chuyển Ngành +
+// Vai trò (được xem/thao tác mọi nơi); các tài khoản khác chỉ hiển thị TĨNH đúng ngành + vai trò đã được cấp
+// (không có nút chuyển) — đúng tinh thần "đăng nhập ngành nào chỉ thấy/thao tác đúng ngành, vai trò đó".
+// Vai trò được xem TOÀN BỘ các ngành (không chỉ ngành riêng của tài khoản mình): Cô trưởng bộ môn, Cố vấn học
+// tập, Quản lý học tập và dĩ nhiên cả Quản trị viên. Chỉ Sinh viên là bị khóa cứng đúng 1 ngành của mình.
+const ROLES_XEM_MOI_NGANH = ['ADMIN','TRUONG_BO_MON','CO_VAN','QUAN_LY'];
+function renderHeaderRight(){
+  const el = document.getElementById('headerRight');
+  if(!currentUser){ el.innerHTML = ''; return; }
+  const isAdmin = currentUser.role === 'ADMIN';
+  const canSwitchNganh = ROLES_XEM_MOI_NGANH.includes(currentUser.role);
+  let html = '<div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;">';
+  if(canSwitchNganh){
+    html += `<div style="display:flex;align-items:center;gap:8px;"><span style="font-size:11px;opacity:.8;">Ngành:</span><div class="role-switch" id="nganhSwitch"></div></div>`;
+  } else {
+    html += `<div style="font-size:12px;opacity:.9;">Ngành: <b>${currentUser.nganh}</b></div>`;
+  }
+  if(isAdmin){
+    html += `<div style="display:flex;align-items:center;gap:8px;"><span style="font-size:11px;opacity:.8;">Vai trò:</span><div class="role-switch" id="roleSwitch"></div></div>`;
+  } else {
+    html += `<div style="font-size:12px;opacity:.9;">Vai trò: <b>${ROLE_LABELS[currentUser.role]}</b></div>`;
+  }
+  html += `<div class="user-badge">👤 ${currentUser.hoTen}${isAdmin?' (Quản trị viên)':''}
+      <button class="btn secondary" style="padding:5px 10px;font-size:12px;" onclick="doLogout()">Đăng xuất</button>
+    </div>`;
+  html += '</div>';
+  el.innerHTML = html;
+  if(canSwitchNganh) renderNganhSwitch();
+  if(isAdmin) renderRoleSwitch();
+}
+
+function renderRoleSwitch(){
+  const el = document.getElementById('roleSwitch');
+  if(!el) return;
+  const items = (currentUser && currentUser.role==='ADMIN') ? [...ROLES, {id:'ADMIN_ACCOUNTS', label:'⚙ Quản lý tài khoản'}] : ROLES;
+  el.innerHTML = items.map(r=>`<button class="${r.id===currentRole?'active':''}" onclick="setRole('${r.id}')">${r.label}</button>`).join('');
+}
+window.setRole = async function(id){
+  currentRole = id;
+  if(id==='SINH_VIEN' && currentUser && currentUser.role==='ADMIN'){
+    if(!currentStudent || currentStudent.nganh!==currentNganh) currentStudent = curStudents()[0] || null;
+  }
+  if(id==='ADMIN_ACCOUNTS'){
+    try{ await loadAdminAccounts(); }catch(e){ toast(e.message); }
+  }
+  render();
+};
+
+// Đổi NGÀNH đang chọn (chỉ Quản trị viên thao tác được) — đổi hẳn bộ dữ liệu (lịch, tổ/lớp, môn học, kho dụng cụ...) đang hiển thị.
+function renderNganhSwitch(){
+  const el = document.getElementById('nganhSwitch');
+  if(!el) return;
+  el.innerHTML = NGANH_LIST.map(n=>`<button class="${n===currentNganh?'active':''}" onclick="setNganh('${n}')">${n}</button>`).join('');
+}
+// Dùng chung cho: bộ chuyển Ngành ở header, và khi Quản trị viên tạo/sửa lịch học sang 1 ngành khác ngành đang xem
+// (đảm bảo tiêu đề trang, bộ chuyển Ngành và các state phụ thuộc ngành luôn đồng bộ ở MỌI nơi đổi currentNganh).
+// Luôn nạp lại dữ liệu mới nhất của ngành đích từ API trước khi đổi hẳn currentNganh — đảm bảo không bao giờ
+// hiển thị dữ liệu cũ/thiếu của 1 ngành chưa từng xem trong phiên hiện tại.
+async function switchToNganh(n, newWeekOffset){
+  try{ await loadNganhData(n); }catch(e){ toast(e.message); }
+  currentNganh = n;
+  weekOffset = (typeof newWeekOffset === 'number') ? newWeekOffset : 0;
+  selectedEquipKey = null;
+  currentStudent = curStudents()[0] || null;
+}
+window.setNganh = async function(n){
+  if(n===currentNganh) return;
+  await switchToNganh(n, 0);
+  render();
+};
+
+document.getElementById('modalOverlay').addEventListener('click', e=>{
+  if(e.target.id==='modalOverlay') closeModal();
+});
+
+/* ============================== KHỞI ĐỘNG: khôi phục phiên đăng nhập (nếu có) rồi vẽ màn hình đầu tiên ============================== */
+async function init(){
+  if(authToken){
+    try{
+      const me = await apiFetch('/auth/me');
+      const acc = userFromApi(me.user);
+      currentUser = acc;
+      const targetNganh = acc.role === 'ADMIN' ? NGANH_LIST[0] : acc.nganh;
+      await loadNganhData(targetNganh);
+      if(acc.role === 'ADMIN'){
+        currentNganh = targetNganh;
+        currentRole = 'TRUONG_BO_MON';
+        currentStudent = curStudents()[0] || null;
+      } else {
+        currentNganh = acc.nganh;
+        currentRole = acc.role;
+        currentStudent = acc.role === 'SINH_VIEN' ? students.find(s=>s.ma_sv===acc.ma_sv) : (curStudents()[0] || null);
+      }
+    }catch(e){
+      // Token hết hạn/không hợp lệ — quay về màn đăng nhập, không cần báo lỗi gây khó chịu cho người dùng.
+      setAuthToken(null);
+      currentUser = null;
+    }
+  }
+  render();
+}
+init();
+</script>
+</body>
+</html>
