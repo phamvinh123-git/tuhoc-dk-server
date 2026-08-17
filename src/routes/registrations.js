@@ -1,6 +1,7 @@
 const express = require('express');
 const { pool } = require('../db');
 const { authRequired } = require('../middleware');
+const { logAction } = require('../audit');
 
 const router = express.Router();
 
@@ -25,6 +26,13 @@ router.post('/registrations', authRequired, async (req, res) => {
 
   try {
     await pool.query('INSERT INTO registrations (schedule_entry_id, student_id) VALUES ($1,$2)', [scheduleEntryId, studentId]);
+    const info = (await pool.query(
+      `SELECT se.subject, se.ngay_hoc, s.ma_sv, s.ten_sv FROM schedule_entries se, students s
+       WHERE se.id=$1 AND s.id=$2`, [scheduleEntryId, studentId]
+    )).rows[0];
+    if (info) {
+      await logAction(req.user, 'REGISTER', `${info.ma_sv} (${info.ten_sv}) đăng ký buổi "${info.subject}" ngày ${info.ngay_hoc.toISOString().slice(0, 10)}`);
+    }
     res.status(201).json({ ok: true });
   } catch (e) {
     if (e.code === '23505') return res.status(409).json({ error: 'Sinh viên đã đăng ký slot này rồi' });
@@ -46,7 +54,14 @@ router.delete('/registrations', authRequired, async (req, res) => {
   }
   if (!scheduleEntryId) return res.status(400).json({ error: 'Thiếu buổi học' });
 
+  const info = (await pool.query(
+    `SELECT se.subject, se.ngay_hoc, s.ma_sv, s.ten_sv FROM schedule_entries se, students s
+     WHERE se.id=$1 AND s.id=$2`, [scheduleEntryId, studentId]
+  )).rows[0];
   await pool.query('DELETE FROM registrations WHERE schedule_entry_id=$1 AND student_id=$2', [scheduleEntryId, studentId]);
+  if (info) {
+    await logAction(req.user, 'CANCEL_REGISTRATION', `Hủy đăng ký của ${info.ma_sv} (${info.ten_sv}) buổi "${info.subject}" ngày ${info.ngay_hoc.toISOString().slice(0, 10)}`);
+  }
   res.json({ ok: true });
 });
 

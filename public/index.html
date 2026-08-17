@@ -273,6 +273,11 @@ const ROLE_LABELS = {
    tin tưởng riêng dữ liệu phía client. */
 let authToken = localStorage.getItem('tuhoc_token') || null;
 let adminAccountsCache = []; // chỉ nạp khi vào màn "Quản lý tài khoản"
+let auditLogCache = [];      // chỉ nạp khi vào màn "Lịch sử truy vết"
+let auditLogTotal = 0;
+let auditLogActionsMap = {}; // mã hành động -> nhãn tiếng Việt (server trả về, dùng chung cho bộ lọc + hiển thị)
+let auditLogFilter = { action: '', q: '' };
+const AUDIT_LOG_PAGE_SIZE = 50;
 
 async function apiFetch(path, opts={}){
   const headers = Object.assign({'Content-Type':'application/json'}, opts.headers||{});
@@ -307,6 +312,17 @@ async function loadNganhData(tenNganh){
 async function loadAdminAccounts(){
   const data = await apiFetch('/admin/accounts');
   adminAccountsCache = data.accounts;
+}
+// reset=true: bắt đầu lại từ đầu (đổi bộ lọc / mới vào màn); reset=false: nạp thêm trang tiếp theo, nối vào cache cũ.
+async function loadAuditLog(reset){
+  if(reset) auditLogCache = [];
+  const params = new URLSearchParams({ limit: AUDIT_LOG_PAGE_SIZE, offset: auditLogCache.length });
+  if(auditLogFilter.action) params.set('action', auditLogFilter.action);
+  if(auditLogFilter.q) params.set('q', auditLogFilter.q);
+  const data = await apiFetch('/admin/audit-log?'+params.toString());
+  auditLogCache = auditLogCache.concat(data.logs);
+  auditLogTotal = data.total;
+  auditLogActionsMap = data.actions;
 }
 
 let currentUser = null;   // null = chưa đăng nhập. Sau khi đăng nhập: {id, username, ho_ten, role, nganh, ma_sv?, student_id?}
@@ -1186,6 +1202,56 @@ window.deleteAccount = async function(kind, username){
   render();
 };
 
+/* ============================== LỊCH SỬ TRUY VẾT (chỉ Quản trị viên) ============================== */
+function fmtDateTime(iso){
+  const d = new Date(iso);
+  const p = n=>String(n).padStart(2,'0');
+  return `${p(d.getDate())}/${p(d.getMonth()+1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+function screenAuditLog(){
+  const actionOptions = Object.keys(auditLogActionsMap).map(k=>`<option value="${k}" ${auditLogFilter.action===k?'selected':''}>${auditLogActionsMap[k]}</option>`).join('');
+  const rows = auditLogCache.map(l=>`
+    <tr>
+      <td style="white-space:nowrap;">${fmtDateTime(l.createdAt)}</td>
+      <td>${l.username}${l.hoTen?` <span class="hint">(${l.hoTen})</span>`:''}</td>
+      <td>${l.role ? (ROLE_LABELS[l.role]||l.role) : ''}</td>
+      <td><span class="badge open">${auditLogActionsMap[l.action] || l.action}</span></td>
+      <td>${l.moTa}</td>
+    </tr>`).join('');
+  return `
+  <div class="card">
+    <h2>Lịch sử truy vết</h2>
+    <div class="desc">Nhật ký mọi hành động làm thay đổi dữ liệu trên hệ thống (đăng nhập, tạo/sửa/xóa tài khoản, lịch học, đăng ký, dụng cụ...) — hiển thị ${auditLogCache.length}/${auditLogTotal} bản ghi, mới nhất trước.</div>
+    <div class="form-row" style="margin-bottom:14px;">
+      <div class="field"><label>Loại hành động</label>
+        <select id="auditFilterAction" onchange="onAuditFilterChange()">
+          <option value="">— Tất cả —</option>
+          ${actionOptions}
+        </select>
+      </div>
+      <div class="field"><label>Tìm theo tên đăng nhập / họ tên / nội dung</label>
+        <input id="auditFilterQ" value="${auditLogFilter.q}" placeholder="vd: admin, hoặc tên buổi học..." onkeydown="if(event.key==='Enter')onAuditFilterChange()">
+      </div>
+      <div class="field" style="justify-content:flex-end;display:flex;">
+        <button class="btn secondary" style="height:38px;" onclick="onAuditFilterChange()">Lọc</button>
+      </div>
+    </div>
+    <table><thead><tr><th>Thời gian</th><th>Người thực hiện</th><th>Vai trò</th><th>Hành động</th><th>Chi tiết</th></tr></thead>
+    <tbody>${rows || '<tr><td colspan="5" class="empty">Chưa có bản ghi nào</td></tr>'}</tbody></table>
+    ${auditLogCache.length < auditLogTotal ? `<div style="margin-top:14px;text-align:center;"><button class="btn secondary" onclick="loadMoreAuditLog()">Tải thêm</button></div>` : ''}
+  </div>`;
+}
+window.onAuditFilterChange = async function(){
+  auditLogFilter.action = document.getElementById('auditFilterAction').value;
+  auditLogFilter.q = document.getElementById('auditFilterQ').value.trim();
+  try{ await loadAuditLog(true); }catch(e){ return toast(e.message); }
+  render();
+};
+window.loadMoreAuditLog = async function(){
+  try{ await loadAuditLog(false); }catch(e){ return toast(e.message); }
+  render();
+};
+
 /* ============================== MAIN RENDER ============================== */
 function render(){
   document.getElementById('appTitle').textContent = currentUser ? `Đăng ký Tự học — Ngành ${currentNganh}` : 'Đăng ký Tự học';
@@ -1196,6 +1262,7 @@ function render(){
     return;
   }
   if(currentUser.role==='ADMIN' && currentRole==='ADMIN_ACCOUNTS'){ app.innerHTML = screenAdminAccounts(); return; }
+  if(currentUser.role==='ADMIN' && currentRole==='AUDIT_LOG'){ app.innerHTML = screenAuditLog(); return; }
   if(currentRole==='SINH_VIEN') app.innerHTML = screenStudent();
   else if(currentRole==='TRUONG_BO_MON') app.innerHTML = screenTruongBoMon();
   else if(currentRole==='CO_VAN') app.innerHTML = screenCoVan();
@@ -1236,7 +1303,7 @@ function renderHeaderRight(){
 function renderRoleSwitch(){
   const el = document.getElementById('roleSwitch');
   if(!el) return;
-  const items = (currentUser && currentUser.role==='ADMIN') ? [...ROLES, {id:'ADMIN_ACCOUNTS', label:'⚙ Quản lý tài khoản'}] : ROLES;
+  const items = (currentUser && currentUser.role==='ADMIN') ? [...ROLES, {id:'ADMIN_ACCOUNTS', label:'⚙ Quản lý tài khoản'}, {id:'AUDIT_LOG', label:'📜 Lịch sử truy vết'}] : ROLES;
   el.innerHTML = items.map(r=>`<button class="${r.id===currentRole?'active':''}" onclick="setRole('${r.id}')">${r.label}</button>`).join('');
 }
 window.setRole = async function(id){
@@ -1246,6 +1313,9 @@ window.setRole = async function(id){
   }
   if(id==='ADMIN_ACCOUNTS'){
     try{ await loadAdminAccounts(); }catch(e){ toast(e.message); }
+  }
+  if(id==='AUDIT_LOG'){
+    try{ await loadAuditLog(true); }catch(e){ toast(e.message); }
   }
   render();
 };

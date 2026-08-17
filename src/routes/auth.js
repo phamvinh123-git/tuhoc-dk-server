@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const { pool } = require('../db');
 const { signToken } = require('../auth');
 const { authRequired } = require('../middleware');
+const { logAction } = require('../audit');
 
 const router = express.Router();
 
@@ -39,6 +40,7 @@ router.post('/login', async (req, res) => {
   if (!row.dang_hoat_dong) return res.status(403).json({ error: 'Tài khoản đã bị khóa — liên hệ Quản trị viên để được mở lại.' });
 
   const token = signToken({ uid: row.id });
+  await logAction({ id: row.id, username: row.username, ho_ten: row.ho_ten, role: row.role }, 'LOGIN', `${row.username} đã đăng nhập`);
   res.json({ token, user: userView(row) });
 });
 
@@ -85,6 +87,7 @@ router.post('/register', async (req, res) => {
   } finally {
     client.release();
   }
+  await logAction({ username, ho_ten: ten_sv, role: 'SINH_VIEN' }, 'SELF_REGISTER', `Sinh viên ${ma_sv} (${ten_sv}) tự đăng ký tài khoản ${username}`);
   res.status(201).json({ ok: true });
 });
 

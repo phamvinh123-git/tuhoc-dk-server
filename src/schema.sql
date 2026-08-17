@@ -151,3 +151,19 @@ CREATE TABLE IF NOT EXISTS equipment_assignments (
     ngay_giao          DATE NOT NULL DEFAULT CURRENT_DATE
 );
 CREATE INDEX IF NOT EXISTS idx_eqassign_entry ON equipment_assignments (schedule_entry_id);
+
+-- Nhật ký truy vết: ghi lại mọi hành động làm thay đổi dữ liệu (ai, làm gì, lúc nào) để Quản trị viên tra cứu.
+-- actor_user_id có thể NULL (ON DELETE SET NULL) nếu tài khoản người thực hiện sau đó bị xóa — nhưng vẫn giữ
+-- nguyên actor_username/actor_ho_ten dạng chữ (snapshot tại thời điểm hành động) để không mất dấu vết lịch sử.
+CREATE TABLE IF NOT EXISTS audit_logs (
+    id             BIGSERIAL PRIMARY KEY,
+    actor_user_id  BIGINT REFERENCES users(id) ON DELETE SET NULL,
+    actor_username VARCHAR(50)  NOT NULL,
+    actor_ho_ten   VARCHAR(150),
+    actor_role     VARCHAR(30),
+    action         VARCHAR(50)  NOT NULL,
+    mo_ta          TEXT         NOT NULL,
+    created_at     TIMESTAMPTZ  NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs (created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs (action);

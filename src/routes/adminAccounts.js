@@ -2,6 +2,7 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const { pool } = require('../db');
 const { authRequired, requireRole } = require('../middleware');
+const { logAction, ACTIONS } = require('../audit');
 
 const router = express.Router();
 // Chỉ áp middleware cho đúng các route /admin/... của router này — KHÔNG dùng router.use() không path,
@@ -75,6 +76,7 @@ router.post('/admin/accounts', async (req, res) => {
   } finally {
     client.release();
   }
+  await logAction(req.user, 'CREATE_ACCOUNT', `Cấp tài khoản ${username} (${role}) cho ${String(hoTen).trim()}`);
   res.status(201).json({ ok: true });
 });
 
@@ -108,6 +110,7 @@ router.put('/admin/accounts/:username', async (req, res) => {
     studentParams.push(u.id);
     await pool.query(`UPDATE students SET ${studentSets.join(', ')} WHERE user_id=$${studentParams.length}`, studentParams);
   }
+  await logAction(req.user, 'UPDATE_ACCOUNT', `Sửa tài khoản ${username}${password ? ' (kèm đổi mật khẩu)' : ''}`);
   res.json({ ok: true });
 });
 
@@ -121,6 +124,7 @@ router.post('/admin/accounts/:username/toggle-active', async (req, res) => {
     if (activeAdmins <= 1) return res.status(400).json({ error: 'Không thể khóa Quản trị viên cuối cùng còn hoạt động' });
   }
   await pool.query('UPDATE users SET dang_hoat_dong=NOT dang_hoat_dong WHERE id=$1', [u.id]);
+  await logAction(req.user, 'TOGGLE_ACCOUNT', `${u.dang_hoat_dong ? 'Khóa' : 'Mở khóa'} tài khoản ${username}`);
   res.json({ ok: true });
 });
 
@@ -154,7 +158,45 @@ router.delete('/admin/accounts/:username', async (req, res) => {
   } finally {
     client.release();
   }
+  await logAction(req.user, 'DELETE_ACCOUNT', `Xóa tài khoản ${username} (${u.role})`);
   res.json({ ok: true });
+});
+
+// Nhật ký truy vết — chỉ Quản trị viên xem được (đã bị chặn ở router.use('/admin', ...) phía trên).
+// Phân trang bằng limit/offset; lọc tuỳ chọn theo action và theo từ khoá (tên đăng nhập / họ tên / mô tả).
+router.get('/admin/audit-log', async (req, res) => {
+  const limit = Math.min(Math.max(parseInt(req.query.limit) || 50, 1), 200);
+  const offset = Math.max(parseInt(req.query.offset) || 0, 0);
+  const action = String(req.query.action || '').trim();
+  const q = String(req.query.q || '').trim();
+
+  const where = [];
+  const params = [];
+  if (action) { params.push(action); where.push(`action = $${params.length}`); }
+  if (q) {
+    params.push(`%${q}%`);
+    where.push(`(actor_username ILIKE $${params.length} OR actor_ho_ten ILIKE $${params.length} OR mo_ta ILIKE $${params.length})`);
+  }
+  const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+
+  const totalRow = (await pool.query(`SELECT count(*)::int AS c FROM audit_logs ${whereSql}`, params)).rows[0];
+  params.push(limit, offset);
+  const rows = (await pool.query(
+    `SELECT id, actor_username, actor_ho_ten, actor_role, action, mo_ta, created_at
+     FROM audit_logs ${whereSql}
+     ORDER BY created_at DESC, id DESC
+     LIMIT $${params.length - 1} OFFSET $${params.length}`,
+    params
+  )).rows;
+
+  res.json({
+    total: totalRow.c,
+    logs: rows.map(r => ({
+      id: r.id, username: r.actor_username, hoTen: r.actor_ho_ten, role: r.actor_role,
+      action: r.action, moTa: r.mo_ta, createdAt: r.created_at,
+    })),
+    actions: ACTIONS,
+  });
 });
 
 module.exports = router;
