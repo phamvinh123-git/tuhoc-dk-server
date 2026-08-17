@@ -403,14 +403,16 @@ window.doLogin = async function(){
   currentUser = acc;
   weekOffset = 0;
   selectedEquipKey = null;
-  const targetNganh = acc.role === 'ADMIN' ? NGANH_LIST[0] : acc.nganh;
+  // "Mọi ngành" (acc.nganh===null, cấp cho Cô trưởng bộ môn/Cố vấn/Quản lý khi tạo tài khoản) hoạt động
+  // giống Admin ở chỗ chọn ngành mặc định + được đổi ngành trong header — nhưng KHÔNG đổi vai trò hiển thị.
+  const hasAllNganh = acc.role === 'ADMIN' || acc.nganh === null;
+  const targetNganh = hasAllNganh ? NGANH_LIST[0] : acc.nganh;
   await loadNganhData(targetNganh);
+  currentNganh = targetNganh;
   if(acc.role === 'ADMIN'){
-    currentNganh = targetNganh;
     currentRole = 'TRUONG_BO_MON';
     currentStudent = curStudents()[0] || null;
   } else {
-    currentNganh = acc.nganh;
     currentRole = acc.role;
     currentStudent = acc.role === 'SINH_VIEN' ? students.find(s=>s.ma_sv===acc.ma_sv) : (curStudents()[0] || null);
   }
@@ -611,7 +613,7 @@ function openScheduleEditor(cellDateISO, slotId){
   const isNew = !cls;
   const hasRegistered = !isNew && cls.registered.length>0;
   const initialNganh = currentNganh;
-  const canPickNganh = ROLES_XEM_MOI_NGANH.includes(currentUser.role);
+  const canPickNganh = hasAllNganhAccess(currentUser);
   const subjectOptions = Array.from(new Set([...(SUBJECTS_BY_NGANH[initialNganh]||[]), ...Object.values(schedule[initialNganh]||{}).map(c=>c.subject)]));
 
   openModal(`
@@ -713,7 +715,7 @@ function weekOffsetForISO(iso){
 // Popup tạo lịch học hàng loạt theo khoảng ngày — Quản lý học tập điền 1 lần, hệ thống tự tạo buổi học cho từng ngày làm việc trong khoảng
 window.openBulkCreateModal = function(){
   const initialNganh = currentNganh;
-  const canPickNganh = ROLES_XEM_MOI_NGANH.includes(currentUser.role);
+  const canPickNganh = hasAllNganhAccess(currentUser);
   const subjectOptions = Array.from(new Set([...(SUBJECTS_BY_NGANH[initialNganh]||[]), ...Object.values(schedule[initialNganh]||{}).map(c=>c.subject)]));
   openModal(`
     <button class="close" onclick="closeModal()">✕</button>
@@ -1106,6 +1108,9 @@ function screenAdminAccounts(){
       </div>
       <div class="field" id="newAccNganhWrap"><label>Ngành</label>
         <select id="newAccNganh">${NGANH_LIST.map(n=>`<option>${n}</option>`).join('')}</select>
+        <label id="newAccMoiNganhWrap" style="display:none;font-weight:400;font-size:12.5px;margin-top:6px;">
+          <input type="checkbox" id="newAccMoiNganh" onchange="onNewAccMoiNganhChange()"> Mọi ngành (xem/thao tác được trên tất cả các ngành, giống Quản trị viên)
+        </label>
       </div>
     </div>
     <div class="form-row" id="newAccStudentFields">
@@ -1120,10 +1125,19 @@ function screenAdminAccounts(){
     <button class="btn" onclick="createAccount()">Tạo tài khoản</button>
   </div>`;
 }
+const STAFF_ROLES_CO_MOI_NGANH = ['TRUONG_BO_MON','CO_VAN','QUAN_LY']; // các vai trò có thể được cấp riêng "Mọi ngành"
 window.onNewAccRoleChange = function(){
   const role = document.getElementById('newAccRole').value;
   document.getElementById('newAccNganhWrap').style.display = role==='ADMIN' ? 'none' : '';
   document.getElementById('newAccStudentFields').style.display = role==='SINH_VIEN' ? 'flex' : 'none';
+  const moiNganhWrap = document.getElementById('newAccMoiNganhWrap');
+  moiNganhWrap.style.display = STAFF_ROLES_CO_MOI_NGANH.includes(role) ? '' : 'none';
+  if(!STAFF_ROLES_CO_MOI_NGANH.includes(role)) document.getElementById('newAccMoiNganh').checked = false;
+  onNewAccMoiNganhChange();
+};
+window.onNewAccMoiNganhChange = function(){
+  const checked = document.getElementById('newAccMoiNganh').checked;
+  document.getElementById('newAccNganh').disabled = checked;
 };
 window.createAccount = async function(){
   const role = document.getElementById('newAccRole').value;
@@ -1140,7 +1154,8 @@ window.createAccount = async function(){
     body.to_lop = document.getElementById('newAccToLop').value.trim();
     if(!body.ma_sv || !body.to_lop) return toast('Vui lòng nhập Mã SV và Tổ/Lớp');
   } else if(role !== 'ADMIN'){
-    body.nganh = document.getElementById('newAccNganh').value;
+    const moiNganh = STAFF_ROLES_CO_MOI_NGANH.includes(role) && document.getElementById('newAccMoiNganh').checked;
+    body.nganh = moiNganh ? '' : document.getElementById('newAccNganh').value;
   }
   try{
     await apiFetch('/admin/accounts', {method:'POST', body:JSON.stringify(body)});
@@ -1153,11 +1168,18 @@ window.openEditAccountModal = function(kind, username){
   const a = adminAccountsCache.find(x=>x.username===username && x.kind===kind);
   if(!a) return;
   const showNganh = kind==='student' || a.role!=='ADMIN';
+  const canMoiNganh = STAFF_ROLES_CO_MOI_NGANH.includes(a.role);
+  const isMoiNganh = canMoiNganh && !a.nganh;
   openModal(`
     <button class="close" onclick="closeModal()">✕</button>
     <h3>Sửa tài khoản — ${username}</h3>
     <div class="field" style="margin-bottom:10px;"><label>Họ tên</label><input id="editAccHoTen" value="${a.hoTen}"></div>
-    ${showNganh ? `<div class="field" style="margin-bottom:10px;"><label>Ngành</label><select id="editAccNganh">${NGANH_LIST.map(n=>`<option ${n===a.nganh?'selected':''}>${n}</option>`).join('')}</select></div>` : ''}
+    ${showNganh ? `<div class="field" style="margin-bottom:10px;"><label>Ngành</label>
+      <select id="editAccNganh" ${isMoiNganh?'disabled':''}>${NGANH_LIST.map(n=>`<option ${n===a.nganh?'selected':''}>${n}</option>`).join('')}</select>
+      ${canMoiNganh ? `<label style="display:block;font-weight:400;font-size:12.5px;margin-top:6px;">
+        <input type="checkbox" id="editAccMoiNganh" ${isMoiNganh?'checked':''} onchange="document.getElementById('editAccNganh').disabled=this.checked"> Mọi ngành (xem/thao tác được trên tất cả các ngành, giống Quản trị viên)
+      </label>` : ''}
+    </div>` : ''}
     <div class="field" style="margin-bottom:14px;"><label>Mật khẩu mới <span class="hint">(để trống nếu không đổi)</span></label><input id="editAccPass" placeholder="••••••"></div>
     <button class="btn" onclick="saveEditAccount('${kind}','${username}')">Lưu thay đổi</button>
   `);
@@ -1165,11 +1187,12 @@ window.openEditAccountModal = function(kind, username){
 window.saveEditAccount = async function(kind, username){
   const hoTen = document.getElementById('editAccHoTen').value.trim();
   const nganhEl = document.getElementById('editAccNganh');
+  const moiNganhEl = document.getElementById('editAccMoiNganh');
   const pass = document.getElementById('editAccPass').value;
   if(!hoTen) return toast('Vui lòng nhập họ tên');
   if(pass && pass.length < 4) return toast('Mật khẩu mới cần tối thiểu 4 ký tự');
   const body = {hoTen};
-  if(nganhEl) body.nganh = nganhEl.value;
+  if(nganhEl) body.nganh = (moiNganhEl && moiNganhEl.checked) ? '' : nganhEl.value;
   if(pass) body.password = pass;
   try{
     await apiFetch(`/admin/accounts/${encodeURIComponent(username)}`, {method:'PUT', body:JSON.stringify(body)});
@@ -1274,12 +1297,15 @@ function render(){
 // (không có nút chuyển) — đúng tinh thần "đăng nhập ngành nào chỉ thấy/thao tác đúng ngành, vai trò đó".
 // Vai trò được xem TOÀN BỘ các ngành (không chỉ ngành riêng của tài khoản mình): Cô trưởng bộ môn, Cố vấn học
 // tập, Quản lý học tập và dĩ nhiên cả Quản trị viên. Chỉ Sinh viên là bị khóa cứng đúng 1 ngành của mình.
-const ROLES_XEM_MOI_NGANH = ['ADMIN','TRUONG_BO_MON','CO_VAN','QUAN_LY'];
+// Được xem/thao tác trên MỌI ngành (không chỉ ngành riêng) khi: là Admin, HOẶC tài khoản Cô trưởng bộ môn/
+// Cố vấn học tập/Quản lý học tập được Admin cấp riêng quyền "Mọi ngành" lúc tạo/sửa tài khoản (nganh=null).
+// Tài khoản không được cấp "Mọi ngành" thì bị khóa cứng đúng 1 ngành đã gán — giống Sinh viên.
+function hasAllNganhAccess(u){ return !!u && (u.role === 'ADMIN' || u.nganh === null); }
 function renderHeaderRight(){
   const el = document.getElementById('headerRight');
   if(!currentUser){ el.innerHTML = ''; return; }
   const isAdmin = currentUser.role === 'ADMIN';
-  const canSwitchNganh = ROLES_XEM_MOI_NGANH.includes(currentUser.role);
+  const canSwitchNganh = hasAllNganhAccess(currentUser);
   let html = '<div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;">';
   if(canSwitchNganh){
     html += `<div style="display:flex;align-items:center;gap:8px;"><span style="font-size:11px;opacity:.8;">Ngành:</span><div class="role-switch" id="nganhSwitch"></div></div>`;
@@ -1354,14 +1380,14 @@ async function init(){
       const me = await apiFetch('/auth/me');
       const acc = userFromApi(me.user);
       currentUser = acc;
-      const targetNganh = acc.role === 'ADMIN' ? NGANH_LIST[0] : acc.nganh;
+      const hasAllNganh = acc.role === 'ADMIN' || acc.nganh === null;
+      const targetNganh = hasAllNganh ? NGANH_LIST[0] : acc.nganh;
       await loadNganhData(targetNganh);
+      currentNganh = targetNganh;
       if(acc.role === 'ADMIN'){
-        currentNganh = targetNganh;
         currentRole = 'TRUONG_BO_MON';
         currentStudent = curStudents()[0] || null;
       } else {
-        currentNganh = acc.nganh;
         currentRole = acc.role;
         currentStudent = acc.role === 'SINH_VIEN' ? students.find(s=>s.ma_sv===acc.ma_sv) : (curStudents()[0] || null);
       }

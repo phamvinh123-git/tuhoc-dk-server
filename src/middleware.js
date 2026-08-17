@@ -1,9 +1,18 @@
 const { verifyToken } = require('./auth');
 const { pool } = require('./db');
 
-const ROLES_XEM_MOI_NGANH = ['ADMIN', 'TRUONG_BO_MON', 'CO_VAN', 'QUAN_LY'];
+// ROLES_SUA_LICH / ROLES_QUAN_LY_DUNG_CU: whitelist theo VAI TRÒ — được phép làm CHỨC NĂNG gì (sửa lịch,
+// quản lý kho dụng cụ), áp dụng như nhau cho mọi tài khoản cùng vai trò.
 const ROLES_SUA_LICH = ['ADMIN', 'TRUONG_BO_MON', 'QUAN_LY'];
 const ROLES_QUAN_LY_DUNG_CU = ['ADMIN', 'QUAN_LY'];
+
+// Được xem/thao tác trên MỌI ngành hay chỉ đúng 1 ngành: đây là quyền theo TỪNG TÀI KHOẢN (không phải theo
+// vai trò) — Admin luôn có nganh_id NULL nên luôn mọi ngành; Cô trưởng bộ môn/Cố vấn học tập/Quản lý học tập
+// có thể được Admin cấp riêng "Mọi ngành" (nganh_id NULL) lúc tạo/sửa tài khoản, hoặc khóa cứng đúng 1 ngành
+// (nganh_id cụ thể) — giống hệt Sinh viên nếu không được cấp mọi ngành.
+function hasAllNganhAccess(user) {
+  return !!user && (user.role === 'ADMIN' || user.nganh_id === null);
+}
 
 async function authRequired(req, res, next) {
   try {
@@ -53,11 +62,12 @@ async function resolveNganhAccess(req, res, tenNganh) {
   const r = await pool.query('SELECT id, ten_nganh FROM nganh WHERE ten_nganh = $1', [tenNganh]);
   const nganh = r.rows[0];
   if (!nganh) { res.status(400).json({ error: 'Ngành không hợp lệ' }); return null; }
-  if (!ROLES_XEM_MOI_NGANH.includes(req.user.role)) {
-    // SINH_VIEN: chỉ đúng ngành của mình
+  if (!hasAllNganhAccess(req.user)) {
+    // Tài khoản chỉ được khóa cứng đúng 1 ngành của mình (Sinh viên luôn vậy; các vai trò khác nếu
+    // không được cấp "Mọi ngành").
     if (req.user.nganh !== tenNganh) { res.status(403).json({ error: 'Bạn không có quyền xem ngành này' }); return null; }
   }
   return nganh;
 }
 
-module.exports = { authRequired, requireRole, resolveNganhAccess, ROLES_XEM_MOI_NGANH, ROLES_SUA_LICH, ROLES_QUAN_LY_DUNG_CU };
+module.exports = { authRequired, requireRole, resolveNganhAccess, hasAllNganhAccess, ROLES_SUA_LICH, ROLES_QUAN_LY_DUNG_CU };

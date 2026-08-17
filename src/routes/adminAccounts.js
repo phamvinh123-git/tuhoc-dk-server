@@ -39,8 +39,10 @@ router.post('/admin/accounts', async (req, res) => {
   const dupUser = (await pool.query('SELECT 1 FROM users WHERE lower(username)=$1', [username])).rows[0];
   if (dupUser) return res.status(409).json({ error: 'Tên đăng nhập đã tồn tại — hãy chọn tên khác' });
 
+  // Cô trưởng bộ môn / Cố vấn học tập / Quản lý học tập có thể được cấp "Mọi ngành" (nganhId=null, giống
+  // Admin) — frontend gửi nganh rỗng ('') để chọn "Mọi ngành". Sinh viên luôn bắt buộc đúng 1 ngành cụ thể.
   let nganhId = null;
-  if (role !== 'ADMIN') {
+  if (role === 'SINH_VIEN' || (role !== 'ADMIN' && String(tenNganh || '').trim())) {
     const nganh = (await pool.query('SELECT id FROM nganh WHERE ten_nganh=$1', [tenNganh])).rows[0];
     if (!nganh) return res.status(400).json({ error: 'Ngành không hợp lệ' });
     nganhId = nganh.id;
@@ -76,7 +78,8 @@ router.post('/admin/accounts', async (req, res) => {
   } finally {
     client.release();
   }
-  await logAction(req.user, 'CREATE_ACCOUNT', `Cấp tài khoản ${username} (${role}) cho ${String(hoTen).trim()}`);
+  const nganhMoTa = role === 'ADMIN' ? '' : (nganhId === null ? ' — Mọi ngành' : ` — ngành ${tenNganh}`);
+  await logAction(req.user, 'CREATE_ACCOUNT', `Cấp tài khoản ${username} (${role}) cho ${String(hoTen).trim()}${nganhMoTa}`);
   res.status(201).json({ ok: true });
 });
 
@@ -89,11 +92,22 @@ router.put('/admin/accounts/:username', async (req, res) => {
   const u = (await pool.query('SELECT id, role FROM users WHERE lower(username)=$1', [username])).rows[0];
   if (!u) return res.status(404).json({ error: 'Không tìm thấy tài khoản' });
 
+  // Sinh viên: luôn bắt buộc đúng 1 ngành cụ thể. Cô trưởng bộ môn/Cố vấn học tập/Quản lý học tập: ngành rỗng
+  // ('') nghĩa là chọn "Mọi ngành" (nganhId=null), có giá trị nghĩa là khóa cứng đúng ngành đó. Admin: bỏ qua
+  // (luôn mọi ngành, không đổi được).
   let nganhId;
-  if (u.role !== 'ADMIN' && tenNganh) {
+  if (u.role === 'SINH_VIEN') {
     const nganh = (await pool.query('SELECT id FROM nganh WHERE ten_nganh=$1', [tenNganh])).rows[0];
     if (!nganh) return res.status(400).json({ error: 'Ngành không hợp lệ' });
     nganhId = nganh.id;
+  } else if (u.role !== 'ADMIN') {
+    if (String(tenNganh || '').trim()) {
+      const nganh = (await pool.query('SELECT id FROM nganh WHERE ten_nganh=$1', [tenNganh])).rows[0];
+      if (!nganh) return res.status(400).json({ error: 'Ngành không hợp lệ' });
+      nganhId = nganh.id;
+    } else {
+      nganhId = null;
+    }
   }
 
   const sets = ['ho_ten=$1'];
@@ -110,7 +124,8 @@ router.put('/admin/accounts/:username', async (req, res) => {
     studentParams.push(u.id);
     await pool.query(`UPDATE students SET ${studentSets.join(', ')} WHERE user_id=$${studentParams.length}`, studentParams);
   }
-  await logAction(req.user, 'UPDATE_ACCOUNT', `Sửa tài khoản ${username}${password ? ' (kèm đổi mật khẩu)' : ''}`);
+  const nganhChangeMoTa = nganhId === undefined ? '' : (nganhId === null ? ' — chuyển sang Mọi ngành' : ` — khóa vào ngành ${tenNganh}`);
+  await logAction(req.user, 'UPDATE_ACCOUNT', `Sửa tài khoản ${username}${password ? ' (kèm đổi mật khẩu)' : ''}${nganhChangeMoTa}`);
   res.json({ ok: true });
 });
 
