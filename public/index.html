@@ -4,10 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Đăng ký Tự học</title>
+<link rel="icon" type="image/png" href="/assets/logo.png">
 <style>
   :root{
     --bg:#f5f7fa; --panel:#ffffff; --ink:#1f2937; --muted:#6b7280;
-    --brand:#2563eb; --brand-ink:#ffffff; --line:#e5e7eb;
+    --brand:#c8203f; --brand-dark:#a01732; --brand-ink:#ffffff; --line:#e5e7eb;
     --ok:#16a34a; --ok-bg:#dcfce7; --warn:#d97706; --warn-bg:#fef3c7;
     --full:#dc2626; --full-bg:#fee2e2; --locked-bg:#f3f4f6;
     --radius:10px;
@@ -60,7 +61,7 @@
   .badge.full{background:var(--full-bg);color:var(--full);}
   .badge.locked{background:var(--locked-bg);color:#374151;}
   .btn{background:var(--brand);color:#fff;border:none;padding:8px 14px;border-radius:8px;font-size:13px;cursor:pointer;}
-  .btn:hover{background:#1d4ed8;}
+  .btn:hover{background:var(--brand-dark);}
   .btn.secondary{background:#fff;border:1px solid var(--line);color:var(--ink);}
   .btn.danger{background:#dc2626;}
   .btn:disabled{background:#d1d5db;cursor:not-allowed;color:#6b7280;}
@@ -110,9 +111,12 @@
 <body>
 
 <header>
-  <div>
-    <h1 id="appTitle">Đăng ký Tự học</h1>
-    <div class="sub">Hệ thống đăng ký buổi tự học</div>
+  <div style="display:flex;align-items:center;gap:14px;">
+    <img src="/assets/logo.png" alt="Đại học Y Hà Nội - Phân hiệu Thanh Hóa" style="width:52px;height:52px;border-radius:50%;background:#fff;flex-shrink:0;">
+    <div>
+      <h1 id="appTitle">Đăng ký Tự học</h1>
+      <div class="sub">Phân hiệu Thanh Hóa · Đại học Y Hà Nội</div>
+    </div>
   </div>
   <div id="headerRight"></div>
 </header>
@@ -359,7 +363,9 @@ function screenLogin(){
   return `
   <div class="auth-wrap">
     <div class="auth-card">
-      <h1>Đăng ký Tự học</h1>
+      <img src="/assets/logo.png" alt="Đại học Y Hà Nội - Phân hiệu Thanh Hóa" style="width:64px;height:64px;display:block;margin:0 auto 12px;">
+      <h1 style="text-align:center;">Đăng ký Tự học</h1>
+      <div class="desc" style="text-align:center;margin-bottom:6px;">Phân hiệu Thanh Hóa · Đại học Y Hà Nội</div>
       <div class="desc">Đăng nhập để tiếp tục. Mỗi tài khoản chỉ thấy đúng ngành và đúng vai trò được cấp — riêng Quản trị viên xem/thao tác được trên mọi ngành, mọi vai trò.</div>
       <div class="field"><label>Tên đăng nhập</label><input id="loginUser" onkeydown="if(event.key==='Enter')doLogin()"></div>
       <div class="field"><label>Mật khẩu</label><input id="loginPass" type="password" placeholder="••••••" onkeydown="if(event.key==='Enter')doLogin()"></div>
