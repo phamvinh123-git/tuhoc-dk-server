@@ -16,7 +16,7 @@ function isoDate(d) {
 function allowedDateRange() {
   const monday = getMonday(new Date());
   const from = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + WEEK_OFFSET_MIN * 7);
-  const to = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + WEEK_OFFSET_MAX * 7 + 4);
+  const to = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + WEEK_OFFSET_MAX * 7 + 6);
   return { fromISO: isoDate(from), toISO: isoDate(to) };
 }
 

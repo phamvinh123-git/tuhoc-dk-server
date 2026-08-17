@@ -133,14 +133,27 @@ router.delete('/admin/accounts/:username', async (req, res) => {
     const admins = (await pool.query(`SELECT count(*)::int AS c FROM users WHERE role='ADMIN'`)).rows[0].c;
     if (admins <= 1) return res.status(400).json({ error: 'Không thể xóa Quản trị viên cuối cùng' });
   }
-  if (u.role === 'SINH_VIEN') {
-    const student = (await pool.query('SELECT id FROM students WHERE user_id=$1', [u.id])).rows[0];
-    if (student) {
-      const hasReg = (await pool.query('SELECT 1 FROM registrations WHERE student_id=$1 LIMIT 1', [student.id])).rows[0];
-      if (hasReg) return res.status(400).json({ error: 'Không thể xóa: sinh viên còn lịch đã đăng ký — hãy hủy đăng ký trước.' });
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    if (u.role === 'SINH_VIEN') {
+      const student = (await client.query('SELECT id FROM students WHERE user_id=$1', [u.id])).rows[0];
+      if (student) {
+        const hasReg = (await client.query('SELECT 1 FROM registrations WHERE student_id=$1 LIMIT 1', [student.id])).rows[0];
+        if (hasReg) { await client.query('ROLLBACK'); return res.status(400).json({ error: 'Không thể xóa: sinh viên còn lịch đã đăng ký — hãy hủy đăng ký trước.' }); }
+        // Xóa luôn hồ sơ sinh viên (bảng students) trước — nếu không, xóa users sẽ báo lỗi khóa ngoại
+        // vì students.user_id đang trỏ tới đúng user này.
+        await client.query('DELETE FROM students WHERE id=$1', [student.id]);
+      }
     }
+    await client.query('DELETE FROM users WHERE id=$1', [u.id]);
+    await client.query('COMMIT');
+  } catch (e) {
+    await client.query('ROLLBACK');
+    throw e;
+  } finally {
+    client.release();
   }
-  await pool.query('DELETE FROM users WHERE id=$1', [u.id]);
   res.json({ ok: true });
 });
 

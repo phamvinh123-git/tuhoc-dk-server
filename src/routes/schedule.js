@@ -47,29 +47,25 @@ router.post('/schedule/bulk', authRequired, requireSuaLich, async (req, res) => 
   const dbSlotId = oldToDbId[slotId];
   if (!dbSlotId) return res.status(400).json({ error: 'Slot không hợp lệ' });
 
-  let created = 0, skippedExisting = 0, skippedWeekend = 0;
+  // Tạo cho TẤT CẢ các ngày trong khoảng (kể cả Thứ 7 / Chủ nhật) — lịch tự học không giới hạn ngày trong tuần.
+  let created = 0, skippedExisting = 0;
   let cur = new Date(fromISO + 'T00:00:00');
   const end = new Date(toISO + 'T00:00:00');
   while (cur <= end) {
-    const dow = cur.getDay();
-    if (dow >= 1 && dow <= 5) {
-      const dISO = cur.getFullYear() + '-' + String(cur.getMonth() + 1).padStart(2, '0') + '-' + String(cur.getDate()).padStart(2, '0');
-      try {
-        await pool.query(
-          `INSERT INTO schedule_entries (nganh_id, ngay_hoc, time_slot_id, subject, noi_dung, phong, giang_vien, suc_chua, created_by)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,10,$8)`,
-          [nganh.id, dISO, dbSlotId, String(subject).trim(), String(content || '').trim(), String(room).trim(), String(teacher || '').trim(), req.user.id]
-        );
-        created++;
-      } catch (e) {
-        if (e.code === '23505') skippedExisting++; else throw e;
-      }
-    } else {
-      skippedWeekend++;
+    const dISO = cur.getFullYear() + '-' + String(cur.getMonth() + 1).padStart(2, '0') + '-' + String(cur.getDate()).padStart(2, '0');
+    try {
+      await pool.query(
+        `INSERT INTO schedule_entries (nganh_id, ngay_hoc, time_slot_id, subject, noi_dung, phong, giang_vien, suc_chua, created_by)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,10,$8)`,
+        [nganh.id, dISO, dbSlotId, String(subject).trim(), String(content || '').trim(), String(room).trim(), String(teacher || '').trim(), req.user.id]
+      );
+      created++;
+    } catch (e) {
+      if (e.code === '23505') skippedExisting++; else throw e;
     }
     cur.setDate(cur.getDate() + 1);
   }
-  res.json({ created, skippedExisting, skippedWeekend });
+  res.json({ created, skippedExisting });
 });
 
 // Sửa 1 buổi học đã có (đổi khung giờ / ngành nếu chưa có SV đăng ký; luôn sửa được nội dung/phòng/GV)

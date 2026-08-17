@@ -135,7 +135,7 @@ const SLOTS = [
   {id:5, buoi:'Chiều', label:'14:30 - 15:20'},
   {id:6, buoi:'Chiều', label:'15:30 - 16:20'},
 ];
-const DAYS = ['Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6'];
+const DAYS = ['Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6','Thứ 7','Chủ nhật'];
 
 // ==== NGÀNH (dự phòng mở rộng ngoài Điều dưỡng) ====
 // Mỗi ngành có bộ dữ liệu riêng: tổ/lớp, môn học, lịch học, kho dụng cụ — độc lập hoàn toàn với ngành khác.
@@ -702,7 +702,7 @@ window.openBulkCreateModal = function(){
   openModal(`
     <button class="close" onclick="closeModal()">✕</button>
     <h3>Tạo lịch học hàng loạt</h3>
-    <p style="margin:0 0 14px;color:var(--muted);font-size:13px;">Dùng khi có sẵn kế hoạch dạng "Bài học – Ngày học" (ví dụ: 1 bài học kéo dài từ 19/8 đến 20/8). Điền 1 lần, hệ thống tự tạo buổi học cho từng ngày làm việc (Thứ 2 - Thứ 6) trong khoảng, tại cùng 1 khung giờ đã chọn.</p>
+    <p style="margin:0 0 14px;color:var(--muted);font-size:13px;">Dùng khi có sẵn kế hoạch dạng "Bài học – Ngày học" (ví dụ: 1 bài học kéo dài từ 19/8 đến 20/8). Điền 1 lần, hệ thống tự tạo buổi học cho từng ngày trong khoảng (kể cả Thứ 7, Chủ nhật), tại cùng 1 khung giờ đã chọn.</p>
     <div class="field" style="margin-bottom:10px;">
       <label>Từ ngày</label>
       <input id="bulkFrom" type="date">
@@ -739,7 +739,7 @@ window.openBulkCreateModal = function(){
       <label>Giảng viên phụ trách <span class="hint">(không bắt buộc)</span></label>
       <input id="bulkTeacher">
     </div>
-    <p style="font-size:12px;color:var(--muted);margin:0 0 14px;">Sức chứa mỗi buổi: cố định tối đa 10 sinh viên. Ngày cuối tuần (Thứ 7, CN) trong khoảng tự động bỏ qua; ngày/khung giờ đã có sẵn lịch cũng được bỏ qua (không ghi đè) và sẽ được báo lại số lượng.</p>
+    <p style="font-size:12px;color:var(--muted);margin:0 0 14px;">Sức chứa mỗi buổi: cố định tối đa 10 sinh viên. Ngày/khung giờ đã có sẵn lịch sẽ được bỏ qua (không ghi đè) và báo lại số lượng.</p>
     <button class="btn" onclick="bulkCreateSchedule()">Tạo lịch hàng loạt</button>
   `);
 };
@@ -769,8 +769,8 @@ window.bulkCreateSchedule = async function(){
 
   if(result.created===0){
     toast(result.skippedExisting>0
-      ? `Không tạo được buổi nào — cả ${result.skippedExisting} ngày làm việc trong khoảng đã có lịch tại khung giờ này ở ngành ${targetNganh}.`
-      : 'Không có ngày làm việc (Thứ 2 - Thứ 6) nào trong khoảng đã chọn.');
+      ? `Không tạo được buổi nào — cả ${result.skippedExisting} ngày trong khoảng đã có lịch tại khung giờ này ở ngành ${targetNganh}.`
+      : 'Không có ngày nào trong khoảng đã chọn.');
     return;
   }
   await switchToNganh(targetNganh, Math.max(WEEK_OFFSET_MIN, Math.min(WEEK_OFFSET_MAX, weekOffsetForISO(fromISO))));
