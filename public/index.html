@@ -829,8 +829,8 @@ function screenStudent(){
     <h2>Lịch đã đăng ký của tôi</h2>
     <div class="desc">${currentStudent.ten_sv} — ${myRegs.length} buổi đã đăng ký (tất cả các tuần)</div>
     ${myRegs.length===0 ? '<div class="empty">Chưa đăng ký buổi nào</div>' :
-      `<table><thead><tr><th>Thứ</th><th>Khung giờ</th><th>Môn học</th><th>Phòng</th><th></th></tr></thead><tbody>
-      ${myRegs.map(r=>`<tr><td>${dowLabelFromISO(r.dateISO)} ${fmtDateFromISO(r.dateISO)}</td><td>${r.s.label}</td><td>${r.cls.subject}</td><td>${r.cls.room}</td>
+      `<table><thead><tr><th>Thứ</th><th>Khung giờ</th><th>Môn học</th><th>Nội dung</th><th>Phòng</th><th></th></tr></thead><tbody>
+      ${myRegs.map(r=>`<tr><td>${dowLabelFromISO(r.dateISO)} ${fmtDateFromISO(r.dateISO)}</td><td>${r.s.label}</td><td>${r.cls.subject}</td><td style="color:var(--muted);font-size:13px;">${r.cls.content||''}</td><td>${r.cls.room}</td>
         <td><button class="btn danger" style="padding:5px 10px;font-size:12px;" onclick="cancelStudent('${r.dateISO}',${r.slotId},'${currentStudent.ma_sv}')">Hủy đăng ký</button></td></tr>`).join('')}
       </tbody></table>`}
   </div>`;
@@ -852,6 +852,7 @@ function handleSlotClick(dateISO, slotId, role){
       <button class="close" onclick="closeModal()">✕</button>
       <h3>Xác nhận đăng ký</h3>
       <p style="font-size:13px;color:var(--muted);">${dowLabelFromISO(dateISO)} ${fmtDateFromISO(dateISO)} · ${slot.label} · ${cls.subject}</p>
+      ${cls.content ? `<p style="font-size:13px;color:var(--muted);margin-top:-6px;">Nội dung: ${cls.content}</p>` : ''}
       <div class="form-row">
         <div class="field"><label>Mã SV</label><input value="${currentStudent.ma_sv}" disabled></div>
         <div class="field"><label>Tên SV</label><input value="${currentStudent.ten_sv}" disabled></div>
