@@ -161,9 +161,13 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     actor_username VARCHAR(50)  NOT NULL,
     actor_ho_ten   VARCHAR(150),
     actor_role     VARCHAR(30),
+    actor_ma_sv    VARCHAR(20),
     action         VARCHAR(50)  NOT NULL,
     mo_ta          TEXT         NOT NULL,
     created_at     TIMESTAMPTZ  NOT NULL DEFAULT now()
 );
+-- Cột thêm sau khi bảng audit_logs đã tồn tại ở production (mã sinh viên để phân biệt 2 sinh viên trùng tên) —
+-- ALTER ... IF NOT EXISTS an toàn để chạy lại nhiều lần, không ảnh hưởng CREATE TABLE ở trên cho môi trường mới.
+ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS actor_ma_sv VARCHAR(20);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs (created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs (action);

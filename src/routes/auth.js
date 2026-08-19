@@ -40,7 +40,7 @@ router.post('/login', async (req, res) => {
   if (!row.dang_hoat_dong) return res.status(403).json({ error: 'Tài khoản đã bị khóa — liên hệ Quản trị viên để được mở lại.' });
 
   const token = signToken({ uid: row.id });
-  await logAction({ id: row.id, username: row.username, ho_ten: row.ho_ten, role: row.role }, 'LOGIN', `${row.username} đã đăng nhập`);
+  await logAction({ id: row.id, username: row.username, ho_ten: row.ho_ten, role: row.role, ma_sv: row.ma_sv }, 'LOGIN', `${row.username} đã đăng nhập`);
   res.json({ token, user: userView(row) });
 });
 
@@ -87,7 +87,7 @@ router.post('/register', async (req, res) => {
   } finally {
     client.release();
   }
-  await logAction({ username, ho_ten: ten_sv, role: 'SINH_VIEN' }, 'SELF_REGISTER', `Sinh viên ${ma_sv} (${ten_sv}) tự đăng ký tài khoản ${username}`);
+  await logAction({ username, ho_ten: ten_sv, role: 'SINH_VIEN', ma_sv }, 'SELF_REGISTER', `Sinh viên ${ma_sv} (${ten_sv}) tự đăng ký tài khoản ${username}`);
   res.status(201).json({ ok: true });
 });
 
@@ -112,6 +112,32 @@ router.put('/password', authRequired, async (req, res) => {
   await pool.query('UPDATE users SET password_hash=$1 WHERE id=$2', [hash, req.user.id]);
   await logAction(req.user, 'CHANGE_PASSWORD', `${req.user.username} đã tự đổi mật khẩu`);
   res.json({ ok: true });
+});
+
+// Cho phép MỌI tài khoản đang đăng nhập tự đổi tên hiển thị (họ tên) của chính mình. Với tài khoản Sinh
+// viên, bảng students có riêng cột ten_sv (dùng để hiển thị ở lịch/danh sách đăng ký/giao dụng cụ...) —
+// phải cập nhật đồng thời cả 2 bảng trong 1 transaction để tránh lệch tên giữa 2 nơi.
+router.put('/name', authRequired, async (req, res) => {
+  const hoTenMoi = String(req.body.hoTen || '').trim();
+  if (!hoTenMoi) return res.status(400).json({ error: 'Vui lòng nhập họ tên' });
+  if (hoTenMoi.length > 150) return res.status(400).json({ error: 'Họ tên quá dài' });
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query('UPDATE users SET ho_ten=$1 WHERE id=$2', [hoTenMoi, req.user.id]);
+    if (req.user.student_id) {
+      await client.query('UPDATE students SET ten_sv=$1 WHERE id=$2', [hoTenMoi, req.user.student_id]);
+    }
+    await client.query('COMMIT');
+  } catch (e) {
+    await client.query('ROLLBACK');
+    throw e;
+  } finally {
+    client.release();
+  }
+  await logAction(req.user, 'CHANGE_NAME', `${req.user.username} đã tự đổi tên hiển thị từ "${req.user.ho_ten}" thành "${hoTenMoi}"`);
+  res.json({ ok: true, ho_ten: hoTenMoi });
 });
 
 router.get('/me', authRequired, (req, res) => {

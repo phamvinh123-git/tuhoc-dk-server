@@ -190,14 +190,14 @@ router.get('/admin/audit-log', async (req, res) => {
   if (action) { params.push(action); where.push(`action = $${params.length}`); }
   if (q) {
     params.push(`%${q}%`);
-    where.push(`(actor_username ILIKE $${params.length} OR actor_ho_ten ILIKE $${params.length} OR mo_ta ILIKE $${params.length})`);
+    where.push(`(actor_username ILIKE $${params.length} OR actor_ho_ten ILIKE $${params.length} OR actor_ma_sv ILIKE $${params.length} OR mo_ta ILIKE $${params.length})`);
   }
   const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
 
   const totalRow = (await pool.query(`SELECT count(*)::int AS c FROM audit_logs ${whereSql}`, params)).rows[0];
   params.push(limit, offset);
   const rows = (await pool.query(
-    `SELECT id, actor_username, actor_ho_ten, actor_role, action, mo_ta, created_at
+    `SELECT id, actor_username, actor_ho_ten, actor_role, actor_ma_sv, action, mo_ta, created_at
      FROM audit_logs ${whereSql}
      ORDER BY created_at DESC, id DESC
      LIMIT $${params.length - 1} OFFSET $${params.length}`,
@@ -207,7 +207,7 @@ router.get('/admin/audit-log', async (req, res) => {
   res.json({
     total: totalRow.c,
     logs: rows.map(r => ({
-      id: r.id, username: r.actor_username, hoTen: r.actor_ho_ten, role: r.actor_role,
+      id: r.id, username: r.actor_username, hoTen: r.actor_ho_ten, role: r.actor_role, maSv: r.actor_ma_sv,
       action: r.action, moTa: r.mo_ta, createdAt: r.created_at,
     })),
     actions: ACTIONS,

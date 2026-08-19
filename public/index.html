@@ -1243,6 +1243,7 @@ function screenAuditLog(){
     <tr>
       <td style="white-space:nowrap;">${fmtDateTime(l.createdAt)}</td>
       <td>${l.username}${l.hoTen?` <span class="hint">(${l.hoTen})</span>`:''}</td>
+      <td>${l.maSv || ''}</td>
       <td>${l.role ? (ROLE_LABELS[l.role]||l.role) : ''}</td>
       <td><span class="badge open">${auditLogActionsMap[l.action] || l.action}</span></td>
       <td>${l.moTa}</td>
@@ -1250,7 +1251,7 @@ function screenAuditLog(){
   return `
   <div class="card">
     <h2>Lịch sử truy vết</h2>
-    <div class="desc">Nhật ký mọi hành động làm thay đổi dữ liệu trên hệ thống (đăng nhập, tạo/sửa/xóa tài khoản, lịch học, đăng ký, dụng cụ...) — hiển thị ${auditLogCache.length}/${auditLogTotal} bản ghi, mới nhất trước.</div>
+    <div class="desc">Nhật ký mọi hành động làm thay đổi dữ liệu trên hệ thống (đăng nhập, tạo/sửa/xóa tài khoản, lịch học, đăng ký, dụng cụ...) — hiển thị ${auditLogCache.length}/${auditLogTotal} bản ghi, mới nhất trước. Cột "Mã SV" giúp phân biệt 2 sinh viên trùng tên.</div>
     <div class="form-row" style="margin-bottom:14px;">
       <div class="field"><label>Loại hành động</label>
         <select id="auditFilterAction" onchange="onAuditFilterChange()">
@@ -1258,15 +1259,15 @@ function screenAuditLog(){
           ${actionOptions}
         </select>
       </div>
-      <div class="field"><label>Tìm theo tên đăng nhập / họ tên / nội dung</label>
-        <input id="auditFilterQ" value="${auditLogFilter.q}" placeholder="vd: admin, hoặc tên buổi học..." onkeydown="if(event.key==='Enter')onAuditFilterChange()">
+      <div class="field"><label>Tìm theo tên đăng nhập / họ tên / mã SV / nội dung</label>
+        <input id="auditFilterQ" value="${auditLogFilter.q}" placeholder="vd: admin, DD001, hoặc tên buổi học..." onkeydown="if(event.key==='Enter')onAuditFilterChange()">
       </div>
       <div class="field" style="justify-content:flex-end;display:flex;">
         <button class="btn secondary" style="height:38px;" onclick="onAuditFilterChange()">Lọc</button>
       </div>
     </div>
-    <table><thead><tr><th>Thời gian</th><th>Người thực hiện</th><th>Vai trò</th><th>Hành động</th><th>Chi tiết</th></tr></thead>
-    <tbody>${rows || '<tr><td colspan="5" class="empty">Chưa có bản ghi nào</td></tr>'}</tbody></table>
+    <table><thead><tr><th>Thời gian</th><th>Người thực hiện</th><th>Mã SV</th><th>Vai trò</th><th>Hành động</th><th>Chi tiết</th></tr></thead>
+    <tbody>${rows || '<tr><td colspan="6" class="empty">Chưa có bản ghi nào</td></tr>'}</tbody></table>
     ${auditLogCache.length < auditLogTotal ? `<div style="margin-top:14px;text-align:center;"><button class="btn secondary" onclick="loadMoreAuditLog()">Tải thêm</button></div>` : ''}
   </div>`;
 }
@@ -1324,6 +1325,7 @@ function renderHeaderRight(){
     html += `<div style="font-size:12px;opacity:.9;">Vai trò: <b>${ROLE_LABELS[currentUser.role]}</b></div>`;
   }
   html += `<div class="user-badge">👤 ${currentUser.hoTen}${isAdmin?' (Quản trị viên)':''}
+      <button class="btn secondary" style="padding:5px 10px;font-size:12px;" onclick="openChangeNameModal()">Đổi tên</button>
       <button class="btn secondary" style="padding:5px 10px;font-size:12px;" onclick="openChangePasswordModal()">Đổi mật khẩu</button>
       <button class="btn secondary" style="padding:5px 10px;font-size:12px;" onclick="doLogout()">Đăng xuất</button>
     </div>`;
@@ -1332,6 +1334,36 @@ function renderHeaderRight(){
   if(canSwitchNganh) renderNganhSwitch();
   if(isAdmin) renderRoleSwitch();
 }
+
+// Cho phép BẤT KỲ tài khoản nào đang đăng nhập (sinh viên lẫn cán bộ) tự đổi tên hiển thị (họ tên) của mình.
+window.openChangeNameModal = function(){
+  openModal(`
+    <button class="close" onclick="closeModal()">✕</button>
+    <h3>Đổi tên hiển thị</h3>
+    <div class="field"><label>Họ tên mới</label><input id="cnName" value="${currentUser.hoTen}" onkeydown="if(event.key==='Enter')doChangeName()"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px;">
+      <button class="btn secondary" onclick="closeModal()">Hủy</button>
+      <button class="btn" onclick="doChangeName()">Lưu tên mới</button>
+    </div>
+  `);
+};
+window.doChangeName = async function(){
+  const hoTenMoi = document.getElementById('cnName').value.trim();
+  if(!hoTenMoi) return toast('Vui lòng nhập họ tên');
+  let res;
+  try{ res = await apiFetch('/auth/name', {method:'PUT', body:JSON.stringify({hoTen:hoTenMoi})}); }
+  catch(e){ return toast(e.message); }
+  currentUser.hoTen = res.ho_ten;
+  // Tài khoản Sinh viên còn có tên trong bảng students, được nhúng sẵn vào lịch/danh sách đăng ký/giao dụng
+  // cụ đang cache ở client — nạp lại dữ liệu ngành hiện tại để mọi nơi hiển thị đồng bộ tên mới ngay lập tức.
+  if(currentUser.role === 'SINH_VIEN'){
+    try{ await loadNganhData(currentNganh); }catch(e){ /* không chặn báo thành công vì tên đã lưu ở server */ }
+    currentStudent = students.find(s=>s.ma_sv===currentUser.ma_sv) || currentStudent;
+  }
+  closeModal();
+  toast('Đã đổi tên thành công');
+  render();
+};
 
 // Cho phép BẤT KỲ tài khoản nào đang đăng nhập (sinh viên lẫn cán bộ) tự đổi mật khẩu của chính mình.
 window.openChangePasswordModal = function(){

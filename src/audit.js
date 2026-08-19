@@ -7,6 +7,7 @@ const ACTIONS = {
   LOGIN: 'Đăng nhập',
   SELF_REGISTER: 'Tự đăng ký tài khoản sinh viên',
   CHANGE_PASSWORD: 'Tự đổi mật khẩu',
+  CHANGE_NAME: 'Tự đổi tên hiển thị',
   CREATE_ACCOUNT: 'Cấp tài khoản',
   UPDATE_ACCOUNT: 'Sửa tài khoản',
   TOGGLE_ACCOUNT: 'Khóa/Mở khóa tài khoản',
@@ -24,14 +25,15 @@ const ACTIONS = {
   REMOVE_EQUIPMENT_ASSIGNMENT: 'Thu hồi dụng cụ',
 };
 
-// actor: {id, username, ho_ten, role} — thường là req.user; với route /auth/login thì req.user chưa có
-// (đó chính là request đang đăng nhập), nên truyền trực tiếp actor lấy từ hàng user vừa xác thực xong.
+// actor: {id, username, ho_ten, role, ma_sv} — thường là req.user (đã có sẵn ma_sv nếu là sinh viên, xem
+// middleware.js); với route /auth/login thì req.user chưa có (đó chính là request đang đăng nhập), nên
+// truyền trực tiếp actor lấy từ hàng user vừa xác thực xong. actor_ma_sv để phân biệt 2 sinh viên trùng tên.
 async function logAction(actor, action, moTa) {
   try {
     await pool.query(
-      `INSERT INTO audit_logs (actor_user_id, actor_username, actor_ho_ten, actor_role, action, mo_ta)
-       VALUES ($1,$2,$3,$4,$5,$6)`,
-      [actor?.id || null, actor?.username || 'unknown', actor?.ho_ten || null, actor?.role || null, action, moTa]
+      `INSERT INTO audit_logs (actor_user_id, actor_username, actor_ho_ten, actor_role, actor_ma_sv, action, mo_ta)
+       VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+      [actor?.id || null, actor?.username || 'unknown', actor?.ho_ten || null, actor?.role || null, actor?.ma_sv || null, action, moTa]
     );
   } catch (e) {
     console.error('[audit] Lỗi ghi nhật ký:', e.message);
