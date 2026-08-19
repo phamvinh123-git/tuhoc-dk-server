@@ -91,6 +91,29 @@ router.post('/register', async (req, res) => {
   res.status(201).json({ ok: true });
 });
 
+// Cho phép MỌI tài khoản đang đăng nhập (sinh viên lẫn cán bộ) tự đổi mật khẩu của chính mình — phải nhập
+// đúng mật khẩu hiện tại để xác nhận, không cần quyền Quản trị viên.
+router.put('/password', authRequired, async (req, res) => {
+  const matKhauCu = String(req.body.matKhauCu || '');
+  const matKhauMoi = String(req.body.matKhauMoi || '');
+  const matKhauMoi2 = String(req.body.matKhauMoi2 || '');
+
+  if (!matKhauCu || !matKhauMoi) return res.status(400).json({ error: 'Vui lòng nhập đầy đủ mật khẩu hiện tại và mật khẩu mới' });
+  if (matKhauMoi !== matKhauMoi2) return res.status(400).json({ error: 'Mật khẩu mới nhập lại không khớp' });
+  if (matKhauMoi.length < 4) return res.status(400).json({ error: 'Mật khẩu mới cần tối thiểu 4 ký tự' });
+
+  const row = (await pool.query('SELECT password_hash FROM users WHERE id=$1', [req.user.id])).rows[0];
+  if (!row) return res.status(404).json({ error: 'Tài khoản không tồn tại' });
+  const ok = await bcrypt.compare(matKhauCu, row.password_hash);
+  if (!ok) return res.status(401).json({ error: 'Mật khẩu hiện tại không đúng' });
+  if (matKhauCu === matKhauMoi) return res.status(400).json({ error: 'Mật khẩu mới phải khác mật khẩu hiện tại' });
+
+  const hash = await bcrypt.hash(matKhauMoi, 10);
+  await pool.query('UPDATE users SET password_hash=$1 WHERE id=$2', [hash, req.user.id]);
+  await logAction(req.user, 'CHANGE_PASSWORD', `${req.user.username} đã tự đổi mật khẩu`);
+  res.json({ ok: true });
+});
+
 router.get('/me', authRequired, (req, res) => {
   res.json({
     user: {

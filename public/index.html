@@ -1324,6 +1324,7 @@ function renderHeaderRight(){
     html += `<div style="font-size:12px;opacity:.9;">Vai trò: <b>${ROLE_LABELS[currentUser.role]}</b></div>`;
   }
   html += `<div class="user-badge">👤 ${currentUser.hoTen}${isAdmin?' (Quản trị viên)':''}
+      <button class="btn secondary" style="padding:5px 10px;font-size:12px;" onclick="openChangePasswordModal()">Đổi mật khẩu</button>
       <button class="btn secondary" style="padding:5px 10px;font-size:12px;" onclick="doLogout()">Đăng xuất</button>
     </div>`;
   html += '</div>';
@@ -1331,6 +1332,34 @@ function renderHeaderRight(){
   if(canSwitchNganh) renderNganhSwitch();
   if(isAdmin) renderRoleSwitch();
 }
+
+// Cho phép BẤT KỲ tài khoản nào đang đăng nhập (sinh viên lẫn cán bộ) tự đổi mật khẩu của chính mình.
+window.openChangePasswordModal = function(){
+  openModal(`
+    <button class="close" onclick="closeModal()">✕</button>
+    <h3>Đổi mật khẩu</h3>
+    <div class="field"><label>Mật khẩu hiện tại</label><input id="cpOld" type="password" placeholder="••••••" onkeydown="if(event.key==='Enter')document.getElementById('cpNew').focus()"></div>
+    <div class="field"><label>Mật khẩu mới</label><input id="cpNew" type="password" placeholder="tối thiểu 4 ký tự" onkeydown="if(event.key==='Enter')document.getElementById('cpNew2').focus()"></div>
+    <div class="field"><label>Nhập lại mật khẩu mới</label><input id="cpNew2" type="password" onkeydown="if(event.key==='Enter')doChangePassword()"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px;">
+      <button class="btn secondary" onclick="closeModal()">Hủy</button>
+      <button class="btn" onclick="doChangePassword()">Lưu mật khẩu mới</button>
+    </div>
+  `);
+};
+window.doChangePassword = async function(){
+  const matKhauCu = document.getElementById('cpOld').value;
+  const matKhauMoi = document.getElementById('cpNew').value;
+  const matKhauMoi2 = document.getElementById('cpNew2').value;
+  if(!matKhauCu || !matKhauMoi) return toast('Vui lòng nhập đầy đủ mật khẩu hiện tại và mật khẩu mới');
+  if(matKhauMoi !== matKhauMoi2) return toast('Mật khẩu mới nhập lại không khớp');
+  if(matKhauMoi.length < 4) return toast('Mật khẩu mới cần tối thiểu 4 ký tự');
+  try{
+    await apiFetch('/auth/password', {method:'PUT', body:JSON.stringify({matKhauCu, matKhauMoi, matKhauMoi2})});
+  }catch(e){ return toast(e.message); }
+  closeModal();
+  toast('Đã đổi mật khẩu thành công');
+};
 
 function renderRoleSwitch(){
   const el = document.getElementById('roleSwitch');

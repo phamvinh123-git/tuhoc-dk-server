@@ -6,6 +6,7 @@ const { pool } = require('./db');
 const ACTIONS = {
   LOGIN: 'Đăng nhập',
   SELF_REGISTER: 'Tự đăng ký tài khoản sinh viên',
+  CHANGE_PASSWORD: 'Tự đổi mật khẩu',
   CREATE_ACCOUNT: 'Cấp tài khoản',
   UPDATE_ACCOUNT: 'Sửa tài khoản',
   TOGGLE_ACCOUNT: 'Khóa/Mở khóa tài khoản',
