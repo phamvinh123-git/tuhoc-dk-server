@@ -1083,6 +1083,7 @@ function screenAdminAccounts(){
     <tr>
       <td>${a.username}${a.username===currentUser.username?' <span class="hint">(bạn)</span>':''}</td>
       <td>${a.hoTen}</td>
+      <td>${a.ma_sv || ''}</td>
       <td>${ROLE_LABELS[a.role]}</td>
       <td>${a.nganh || '<span class="hint">— (mọi ngành)</span>'}</td>
       <td><span class="badge ${a.active!==false?'open':'locked'}">${a.active!==false?'Hoạt động':'Đã khóa'}</span></td>
@@ -1096,7 +1097,7 @@ function screenAdminAccounts(){
   <div class="card">
     <h2>Quản lý tài khoản</h2>
     <div class="desc">Quyền Quản trị viên: xem, tạo, sửa, khóa/mở khóa và xóa tài khoản của tất cả vai trò (Cô trưởng bộ môn, Cố vấn học tập, Quản lý học tập, Sinh viên, Quản trị viên), thuộc mọi ngành. Tổng cộng ${allAccounts.length} tài khoản.</div>
-    <table><thead><tr><th>Tên đăng nhập</th><th>Họ tên</th><th>Vai trò</th><th>Ngành</th><th>Trạng thái</th><th></th></tr></thead>
+    <table><thead><tr><th>Tên đăng nhập</th><th>Họ tên</th><th>Mã SV</th><th>Vai trò</th><th>Ngành</th><th>Trạng thái</th><th></th></tr></thead>
     <tbody>${rows}</tbody></table>
   </div>
   <div class="card">
