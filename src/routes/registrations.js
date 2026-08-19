@@ -2,6 +2,7 @@ const express = require('express');
 const { pool } = require('../db');
 const { authRequired } = require('../middleware');
 const { logAction } = require('../audit');
+const { isRegistrationClosed } = require('../dateUtil');
 
 const router = express.Router();
 
@@ -23,6 +24,14 @@ router.post('/registrations', authRequired, async (req, res) => {
     return res.status(403).json({ error: 'Vai trò của bạn không thể tự đăng ký buổi học' });
   }
   if (!scheduleEntryId) return res.status(400).json({ error: 'Thiếu buổi học' });
+
+  // Khóa đăng ký từ 17:00 (giờ VN) ngày hôm trước buổi học — áp dụng cho sinh viên tự đăng ký; Admin vẫn
+  // đăng ký thay được trong trường hợp đặc biệt (giống các quyền ghi đè khác Admin đang có sẵn).
+  const entryRow = (await pool.query('SELECT ngay_hoc FROM schedule_entries WHERE id=$1', [scheduleEntryId])).rows[0];
+  if (!entryRow) return res.status(404).json({ error: 'Buổi học không tồn tại' });
+  if (req.user.role !== 'ADMIN' && isRegistrationClosed(entryRow.ngay_hoc)) {
+    return res.status(400).json({ error: 'Đã quá hạn đăng ký — chỉ được đăng ký tới 17:00 ngày hôm trước buổi học.' });
+  }
 
   try {
     await pool.query('INSERT INTO registrations (schedule_entry_id, student_id) VALUES ($1,$2)', [scheduleEntryId, studentId]);

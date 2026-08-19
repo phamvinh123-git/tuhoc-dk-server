@@ -78,6 +78,8 @@
   .slot-box.near-full{border-left-color:var(--warn);background:linear-gradient(180deg,#fffdf8,#fff 40%);}
   .slot-box.full{border-left-color:var(--full);background:#fff7f7;}
   .slot-box.locked-manual{border-left-color:#6b7280;background:#fafafa;}
+  .slot-box.deadline-closed{border-left-color:#9ca3af;background:#fbfbfc;}
+  .slot-box.deadline-closed .count{color:#6b7280;}
   .slot-box:hover{box-shadow:var(--shadow-hover);transform:translateY(-2px);}
   .slot-box:active{transform:translateY(-1px) scale(.99);}
   .slot-box .subj{font-weight:700;color:#111827;margin-bottom:3px;}
@@ -594,6 +596,7 @@ function renderWeekGrid(opts={}){
     <span><i class="dot" style="background:#d97706"></i> Sắp đầy (≥8/10)</span>
     <span><i class="dot" style="background:#dc2626"></i> Đã đầy — tự khóa</span>
     <span><i class="dot" style="background:#6b7280"></i> Khóa thủ công</span>
+    ${roleForClick==='SINH_VIEN' ? '<span><i class="dot" style="background:#9ca3af"></i> Hết hạn đăng ký (sau 17:00 hôm trước)</span>' : ''}
   </div>`;
   html += '<div class="grid-week"><table><thead><tr><th style="width:120px;">Khung giờ</th>' +
     DAYS.map((d,i)=>`<th><span class="dow">${d}</span><span class="ddate">${fmtDate(weekDates[i])}</span></th>`).join('') +
@@ -613,13 +616,18 @@ function renderWeekGrid(opts={}){
         }
       } else {
         const status = slotStatus(cls);
+        // Khóa đăng ký từ 17:00 (giờ VN) ngày hôm trước buổi học — chỉ áp dụng cho SINH VIÊN tự đăng ký
+        // (Cô trưởng bộ môn/Cố vấn/Quản lý/Admin vẫn xem đúng màu trạng thái thật để quản lý lịch bình thường).
+        // currentUser.role!=='ADMIN' để Admin vẫn đăng ký thay được qua chế độ xem thử "Sinh viên" nếu cần.
+        const isDeadlineClosed = roleForClick==='SINH_VIEN' && currentUser.role!=='ADMIN' && cls.registrationClosed && status!=='full' && status!=='locked-manual';
+        const boxClass = isDeadlineClosed ? 'deadline-closed' : status;
         const clickAttr = clickable ? `onclick="handleSlotClick('${dateISO}',${s.id},'${roleForClick}')"` : '';
-        html += `<td class="cell"><div class="slot-box ${status}" ${clickAttr} style="${clickable?'cursor:pointer':''}">
+        html += `<td class="cell"><div class="slot-box ${boxClass}" ${clickAttr} style="${clickable?'cursor:pointer':''}">
           <div class="subj">${cls.subject}</div>
           <div class="code">${cls.code||''}</div>
           <div class="meta">Phòng: <b>${cls.room}</b></div>
           <div class="meta">GV: <b>${cls.teacher}</b></div>
-          <div class="count">${cls.registered.length}/${cls.capacity} SV${status==='full'?' — Đã khóa':(status==='locked-manual'?' — Khóa tay':'')}</div>
+          <div class="count">${cls.registered.length}/${cls.capacity} SV${status==='full'?' — Đã khóa':(status==='locked-manual'?' — Khóa tay':(isDeadlineClosed?' — Hết hạn đăng ký':''))}</div>
         </div></td>`;
       }
     });
@@ -907,7 +915,7 @@ function screenStudent(){
       <div class="field"><label>Tên SV</label><input value="${currentStudent.ten_sv}" disabled></div>
       <div class="field"><label>Tổ / Lớp</label><input value="${currentStudent.to_lop}" disabled></div>
     </div>
-    <small class="hint">Nhấp vào 1 ô còn chỗ trên lịch bên dưới để đăng ký. Ô đỏ = đã đầy 10 người, hệ thống tự khóa và không cho đăng ký thêm.</small>
+    <small class="hint">Nhấp vào 1 ô còn chỗ trên lịch bên dưới để đăng ký. Ô đỏ = đã đầy 10 người, hệ thống tự khóa và không cho đăng ký thêm. Mỗi buổi học chỉ nhận đăng ký tới <b>17:00 ngày hôm trước</b> — sau giờ đó ô sẽ tự khóa (xám).</small>
     ${renderWeekGrid({clickable:true, roleForClick:'SINH_VIEN'})}
   </div>
   <div class="card">
@@ -932,6 +940,7 @@ function handleSlotClick(dateISO, slotId, role){
     const slot = SLOTS.find(s=>s.id==slotId);
     if(status==='full') return toast('Slot đã đầy 10 người — đã tự động khóa');
     if(status==='locked-manual') return toast('Slot đã bị khóa bởi Cô trưởng bộ môn');
+    if(cls.registrationClosed && currentUser.role!=='ADMIN') return toast('Đã hết hạn đăng ký — chỉ được đăng ký tới 17:00 ngày hôm trước buổi học.');
     if(cls.registered.some(r=>r.ma_sv===currentStudent.ma_sv)) return toast('Bạn đã đăng ký slot này rồi');
     openModal(`
       <button class="close" onclick="closeModal()">✕</button>

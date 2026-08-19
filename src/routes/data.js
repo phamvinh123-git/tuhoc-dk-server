@@ -2,7 +2,7 @@ const express = require('express');
 const { pool } = require('../db');
 const { authRequired, resolveNganhAccess } = require('../middleware');
 const { getSlotMaps } = require('../slots');
-const { allowedDateRange } = require('../dateUtil');
+const { allowedDateRange, isRegistrationClosed } = require('../dateUtil');
 
 const router = express.Router();
 
@@ -61,6 +61,7 @@ router.get('/bootstrap', authRequired, async (req, res) => {
       registered: regsByEntry[e.id] || [],
       lockedManual: e.khoa_thu_cong,
       ngayHoc: dateISO,
+      registrationClosed: isRegistrationClosed(e.ngay_hoc),
     };
   });
 

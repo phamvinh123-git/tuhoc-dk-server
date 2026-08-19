@@ -20,4 +20,30 @@ function allowedDateRange() {
   return { fromISO: isoDate(from), toISO: isoDate(to) };
 }
 
-module.exports = { allowedDateRange, isoDate, getMonday, WEEK_OFFSET_MIN, WEEK_OFFSET_MAX };
+// ==== Khóa đăng ký tự học từ 17:00 (giờ Việt Nam) của ngày HÔM TRƯỚC buổi học ====
+// Tính hoàn toàn bằng mốc UTC epoch (không dùng giờ hệ điều hành server) để không phụ thuộc server chạy
+// múi giờ nào — Việt Nam là UTC+7 quanh năm (không có giờ mùa hè) nên phép quy đổi này luôn đúng.
+const REG_CUTOFF_HOUR_ICT = 17;
+const ICT_OFFSET_HOURS = 7;
+
+// ngayHoc: Date (cột DATE Postgres — driver trả về mốc UTC 00:00 đúng ngày đã lưu) hoặc chuỗi 'YYYY-MM-DD'.
+// Trả về mốc thời gian (epoch ms, UTC) mà từ đó trở đi buổi học ngày `ngayHoc` bị khóa đăng ký.
+function registrationCutoffMs(ngayHoc) {
+  let y, m, d;
+  if (ngayHoc instanceof Date) {
+    y = ngayHoc.getUTCFullYear(); m = ngayHoc.getUTCMonth(); d = ngayHoc.getUTCDate();
+  } else {
+    const [yy, mm, dd] = String(ngayHoc).split('-').map(Number);
+    y = yy; m = mm - 1; d = dd;
+  }
+  // 17:00 giờ VN = 10:00 UTC cùng ngày => mốc khóa = 10:00 UTC của (ngày buổi học - 1 ngày).
+  return Date.UTC(y, m, d - 1, REG_CUTOFF_HOUR_ICT - ICT_OFFSET_HOURS, 0, 0, 0);
+}
+function isRegistrationClosed(ngayHoc) {
+  return Date.now() >= registrationCutoffMs(ngayHoc);
+}
+
+module.exports = {
+  allowedDateRange, isoDate, getMonday, WEEK_OFFSET_MIN, WEEK_OFFSET_MAX,
+  isRegistrationClosed, registrationCutoffMs, REG_CUTOFF_HOUR_ICT,
+};
