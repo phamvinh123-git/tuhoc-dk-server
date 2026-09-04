@@ -6,6 +6,14 @@ const { logAction } = require('../audit');
 
 const router = express.Router();
 
+// Sức chứa mặc định mỗi slot khi TẠO MỚI buổi học — 15 cho ngành Điều dưỡng (theo yêu cầu tăng riêng ngành
+// này), 10 cho các ngành còn lại. Muốn tùy biến thêm ngành khác trong tương lai chỉ cần mở rộng map này.
+const CAPACITY_BY_NGANH = { 'Điều dưỡng': 15 };
+const DEFAULT_CAPACITY = 10;
+function capacityForNganh(tenNganh) {
+  return CAPACITY_BY_NGANH[tenNganh] || DEFAULT_CAPACITY;
+}
+
 function requireSuaLich(req, res, next) {
   if (!ROLES_SUA_LICH.includes(req.user.role)) return res.status(403).json({ error: 'Bạn không có quyền sửa lịch học' });
   next();
@@ -25,8 +33,8 @@ router.post('/schedule', authRequired, requireSuaLich, async (req, res) => {
   try {
     const r = await pool.query(
       `INSERT INTO schedule_entries (nganh_id, ngay_hoc, time_slot_id, subject, noi_dung, phong, giang_vien, suc_chua, created_by)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,10,$8) RETURNING id`,
-      [nganh.id, dateISO, dbSlotId, String(subject).trim(), String(content || '').trim(), String(room).trim(), String(teacher || '').trim(), req.user.id]
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id`,
+      [nganh.id, dateISO, dbSlotId, String(subject).trim(), String(content || '').trim(), String(room).trim(), String(teacher || '').trim(), capacityForNganh(nganh.ten_nganh), req.user.id]
     );
     await logAction(req.user, 'CREATE_SCHEDULE', `Tạo buổi học "${String(subject).trim()}" ngày ${dateISO} ngành ${nganh.ten_nganh}`);
     res.status(201).json({ id: r.rows[0].id });
@@ -50,6 +58,7 @@ router.post('/schedule/bulk', authRequired, requireSuaLich, async (req, res) => 
   if (!dbSlotId) return res.status(400).json({ error: 'Slot không hợp lệ' });
 
   // Tạo cho TẤT CẢ các ngày trong khoảng (kể cả Thứ 7 / Chủ nhật) — lịch tự học không giới hạn ngày trong tuần.
+  const capacity = capacityForNganh(nganh.ten_nganh);
   let created = 0, skippedExisting = 0;
   let cur = new Date(fromISO + 'T00:00:00');
   const end = new Date(toISO + 'T00:00:00');
@@ -58,8 +67,8 @@ router.post('/schedule/bulk', authRequired, requireSuaLich, async (req, res) => 
     try {
       await pool.query(
         `INSERT INTO schedule_entries (nganh_id, ngay_hoc, time_slot_id, subject, noi_dung, phong, giang_vien, suc_chua, created_by)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,10,$8)`,
-        [nganh.id, dISO, dbSlotId, String(subject).trim(), String(content || '').trim(), String(room).trim(), String(teacher || '').trim(), req.user.id]
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+        [nganh.id, dISO, dbSlotId, String(subject).trim(), String(content || '').trim(), String(room).trim(), String(teacher || '').trim(), capacity, req.user.id]
       );
       created++;
     } catch (e) {
@@ -97,10 +106,16 @@ router.put('/schedule/:id', authRequired, requireSuaLich, async (req, res) => {
     return res.status(400).json({ error: 'Không thể đổi khung giờ hoặc ngành: buổi học đã có sinh viên đăng ký. Hãy hủy đăng ký trước.' });
   }
 
+  // Đổi sang ngành khác (chỉ xảy ra khi buổi học chưa có ai đăng ký, xem check `moving` ở trên) thì cập nhật
+  // luôn sức chứa theo đúng mức mặc định của ngành đích (vd chuyển sang Điều dưỡng thì tăng lên 15).
+  const nganhChanged = targetNganh.id !== cur.nganh_id;
+  const sucChuaSql = nganhChanged ? ', suc_chua=$8' : '';
+  const sucChuaParams = nganhChanged ? [capacityForNganh(targetNganh.ten_nganh)] : [];
+
   try {
     await pool.query(
-      `UPDATE schedule_entries SET nganh_id=$1, time_slot_id=$2, subject=$3, noi_dung=$4, phong=$5, giang_vien=$6, updated_at=now() WHERE id=$7`,
-      [targetNganh.id, dbSlotId, String(subject).trim(), String(content || '').trim(), String(room).trim(), String(teacher || '').trim(), id]
+      `UPDATE schedule_entries SET nganh_id=$1, time_slot_id=$2, subject=$3, noi_dung=$4, phong=$5, giang_vien=$6, updated_at=now()${sucChuaSql} WHERE id=$7`,
+      [targetNganh.id, dbSlotId, String(subject).trim(), String(content || '').trim(), String(room).trim(), String(teacher || '').trim(), id, ...sucChuaParams]
     );
     await logAction(req.user, 'UPDATE_SCHEDULE', `Sửa buổi học "${String(subject).trim()}" ngày ${cur.ngay_hoc.toISOString().slice(0, 10)} ngành ${targetNganh.ten_nganh}`);
     res.json({ ok: true, movedNganh: targetNganh.id !== cur.nganh_id, nganh: targetNganh.ten_nganh, ngayHoc: cur.ngay_hoc.toISOString().slice(0, 10) });

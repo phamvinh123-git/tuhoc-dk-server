@@ -210,6 +210,13 @@ const DAYS = ['Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6','Thứ 7','Chủ
 const NGANH_LIST = ['Điều dưỡng','Phục hồi chức năng','Kỹ thuật xét nghiệm','Chẩn đoán hình ảnh'];
 let currentNganh = NGANH_LIST[0];
 
+// Sức chứa mặc định mỗi slot khi TẠO MỚI buổi học — phải khớp chính xác với CAPACITY_BY_NGANH ở
+// src/routes/schedule.js (backend); ở đây chỉ dùng để hiển thị gợi ý trước cho người dùng, số thật luôn
+// do backend quyết định khi lưu.
+const CAPACITY_BY_NGANH = { 'Điều dưỡng': 15 };
+const DEFAULT_CAPACITY = 10;
+function capacityForNganh(tenNganh){ return CAPACITY_BY_NGANH[tenNganh] || DEFAULT_CAPACITY; }
+
 const TO_LOP_BY_NGANH = {
   'Điều dưỡng': ['Tổ 1 - ĐD45A','Tổ 2 - ĐD45A','Tổ 3 - ĐD45B'],
   'Phục hồi chức năng': ['Tổ 1 - PHCN45A','Tổ 2 - PHCN45A'],
@@ -593,7 +600,7 @@ function renderWeekGrid(opts={}){
   let html = renderWeekNav();
   html += `<div class="legend">
     <span><i class="dot" style="background:#16a34a"></i> Còn chỗ</span>
-    <span><i class="dot" style="background:#d97706"></i> Sắp đầy (≥8/10)</span>
+    <span><i class="dot" style="background:#d97706"></i> Sắp đầy (còn ≤2 chỗ)</span>
     <span><i class="dot" style="background:#dc2626"></i> Đã đầy — tự khóa</span>
     <span><i class="dot" style="background:#6b7280"></i> Khóa thủ công</span>
     ${roleForClick==='SINH_VIEN' ? '<span><i class="dot" style="background:#9ca3af"></i> Hết hạn đăng ký (sau 17:00 hôm trước)</span>' : ''}
@@ -732,7 +739,7 @@ function openScheduleEditor(cellDateISO, slotId){
       <label>Giảng viên phụ trách</label>
       <input id="schedTeacher" value="${cls ? cls.teacher : ''}">
     </div>
-    <p style="font-size:12px;color:var(--muted);margin:0 0 14px;">Sức chứa: tối đa <b>10 sinh viên</b>/buổi (cố định theo quy định, không thay đổi được).</p>
+    <p id="schedCapacityHint" style="font-size:12px;color:var(--muted);margin:0 0 14px;">Sức chứa: tối đa <b>${cls ? cls.capacity : capacityForNganh(initialNganh)} sinh viên</b>/buổi (theo quy định của ngành, không tự chỉnh tay được).</p>
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
       <button class="btn" onclick="saveScheduleEditor('${cellDateISO}',${slotId})">${isNew?'Tạo buổi học':'Lưu thay đổi'}</button>
       ${!isNew ? `<button class="btn danger" onclick="deleteScheduleEntry('${cellDateISO}',${slotId})">Xóa buổi học</button>` : ''}
@@ -743,6 +750,8 @@ window.onSchedNganhChange = function(){
   const n = document.getElementById('schedNganh').value;
   const opts = Array.from(new Set([...(SUBJECTS_BY_NGANH[n]||[]), ...Object.values(schedule[n]||{}).map(c=>c.subject)]));
   document.getElementById('subjectDatalist').innerHTML = opts.map(s=>`<option value="${s}">`).join('');
+  const hintEl = document.getElementById('schedCapacityHint');
+  if(hintEl) hintEl.innerHTML = `Sức chứa: tối đa <b>${capacityForNganh(n)} sinh viên</b>/buổi (theo quy định của ngành, không tự chỉnh tay được).`;
 };
 async function saveScheduleEditor(cellDateISO, slotId){
   const origNganh = currentNganh;
@@ -832,7 +841,7 @@ window.openBulkCreateModal = function(){
       <label>Giảng viên phụ trách <span class="hint">(không bắt buộc)</span></label>
       <input id="bulkTeacher">
     </div>
-    <p style="font-size:12px;color:var(--muted);margin:0 0 14px;">Sức chứa mỗi buổi: cố định tối đa 10 sinh viên. Ngày/khung giờ đã có sẵn lịch sẽ được bỏ qua (không ghi đè) và báo lại số lượng.</p>
+    <p id="bulkCapacityHint" style="font-size:12px;color:var(--muted);margin:0 0 14px;">Sức chứa mỗi buổi: tối đa <b>${capacityForNganh(initialNganh)} sinh viên</b> (theo quy định của ngành đã chọn ở trên). Ngày/khung giờ đã có sẵn lịch sẽ được bỏ qua (không ghi đè) và báo lại số lượng.</p>
     <button class="btn" onclick="bulkCreateSchedule()">Tạo lịch hàng loạt</button>
   `);
 };
@@ -840,6 +849,8 @@ window.onBulkNganhChange = function(){
   const n = document.getElementById('bulkNganh').value;
   const opts = Array.from(new Set([...(SUBJECTS_BY_NGANH[n]||[]), ...Object.values(schedule[n]||{}).map(c=>c.subject)]));
   document.getElementById('subjectDatalistBulk').innerHTML = opts.map(s=>`<option value="${s}">`).join('');
+  const hintEl = document.getElementById('bulkCapacityHint');
+  if(hintEl) hintEl.innerHTML = `Sức chứa mỗi buổi: tối đa <b>${capacityForNganh(n)} sinh viên</b> (theo quy định của ngành đã chọn ở trên). Ngày/khung giờ đã có sẵn lịch sẽ được bỏ qua (không ghi đè) và báo lại số lượng.`;
 };
 window.bulkCreateSchedule = async function(){
   const fromISO = document.getElementById('bulkFrom').value;
@@ -915,7 +926,7 @@ function screenStudent(){
       <div class="field"><label>Tên SV</label><input value="${currentStudent.ten_sv}" disabled></div>
       <div class="field"><label>Tổ / Lớp</label><input value="${currentStudent.to_lop}" disabled></div>
     </div>
-    <small class="hint">Nhấp vào 1 ô còn chỗ trên lịch bên dưới để đăng ký. Ô đỏ = đã đầy 10 người, hệ thống tự khóa và không cho đăng ký thêm. Mỗi buổi học chỉ nhận đăng ký tới <b>17:00 ngày hôm trước</b> — sau giờ đó ô sẽ tự khóa (xám).</small>
+    <small class="hint">Nhấp vào 1 ô còn chỗ trên lịch bên dưới để đăng ký. Ô đỏ = đã đầy số lượng tối đa, hệ thống tự khóa và không cho đăng ký thêm (ngành Điều dưỡng tối đa 15 SV/buổi, các ngành khác tối đa 10 SV/buổi). Mỗi buổi học chỉ nhận đăng ký tới <b>17:00 ngày hôm trước</b> — sau giờ đó ô sẽ tự khóa (xám).</small>
     ${renderWeekGrid({clickable:true, roleForClick:'SINH_VIEN'})}
   </div>
   <div class="card">
@@ -938,7 +949,7 @@ function handleSlotClick(dateISO, slotId, role){
     const cls = curSchedule()[`${dateISO}_${slotId}`];
     const status = slotStatus(cls);
     const slot = SLOTS.find(s=>s.id==slotId);
-    if(status==='full') return toast('Slot đã đầy 10 người — đã tự động khóa');
+    if(status==='full') return toast(`Slot đã đầy ${cls.capacity} người — đã tự động khóa`);
     if(status==='locked-manual') return toast('Slot đã bị khóa bởi Cô trưởng bộ môn');
     if(cls.registrationClosed && currentUser.role!=='ADMIN') return toast('Đã hết hạn đăng ký — chỉ được đăng ký tới 17:00 ngày hôm trước buổi học.');
     if(cls.registered.some(r=>r.ma_sv===currentStudent.ma_sv)) return toast('Bạn đã đăng ký slot này rồi');

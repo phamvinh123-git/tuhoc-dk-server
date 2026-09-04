@@ -9,6 +9,7 @@ async function migrate() {
   await pool.query(sql);
   console.log('[migrate] Đã tạo/cập nhật schema thành công.');
   await seedReferenceData();
+  await bumpDieuDuongCapacity();
   await bootstrapAdmin();
 }
 
@@ -45,6 +46,20 @@ async function seedReferenceData() {
     );
   }
   console.log('[migrate] Đã đồng bộ danh sách Ngành + khung giờ học.');
+}
+
+// Tăng sức chứa/slot của các buổi học ĐÃ TẠO SẴN ở ngành Điều dưỡng lên 15 (khớp mức mặc định mới khi tạo
+// buổi học mới trong src/routes/schedule.js — chỉ đổi hardcode 10 ở đó thì các buổi CŨ vẫn giữ 10, nên cần
+// bù thêm bước này). Idempotent theo kiểu MỘT CHIỀU (chỉ tăng, không hạ): chỉ cập nhật các buổi đang <15,
+// nên chạy lại nhiều lần vô hại — không tự động hạ lại nếu sau này có người chỉnh về dưới 15 theo ý muốn.
+async function bumpDieuDuongCapacity() {
+  const r = await pool.query(
+    `UPDATE schedule_entries SET suc_chua = 15, updated_at = now()
+     WHERE nganh_id = (SELECT id FROM nganh WHERE ten_nganh = 'Điều dưỡng') AND suc_chua < 15`
+  );
+  if (r.rowCount > 0) {
+    console.log(`[migrate] Đã tăng sức chứa lên 15 sinh viên/slot cho ${r.rowCount} buổi học ngành Điều dưỡng đã tạo sẵn.`);
+  }
 }
 
 // Chỉ chạy đúng 1 lần: nếu bảng users đang trống VÀ có đủ 2 biến môi trường
