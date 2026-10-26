@@ -21,6 +21,7 @@ const NGANH = [
   { ten: 'Phục hồi chức năng', ma: 'PHCN' },
   { ten: 'Kỹ thuật xét nghiệm', ma: 'XN' },
   { ten: 'Chẩn đoán hình ảnh', ma: 'CDHA' },
+  { ten: 'Y Khoa', ma: 'YK' },
 ];
 const SLOTS = [
   { buoi: 'sang', thu: 1, nhan: '8:00 - 8:50' },

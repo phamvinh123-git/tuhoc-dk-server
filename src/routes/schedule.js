@@ -7,8 +7,9 @@ const { logAction } = require('../audit');
 const router = express.Router();
 
 // Sức chứa mặc định mỗi slot khi TẠO MỚI buổi học — 15 cho ngành Điều dưỡng (theo yêu cầu tăng riêng ngành
-// này), 10 cho các ngành còn lại. Muốn tùy biến thêm ngành khác trong tương lai chỉ cần mở rộng map này.
-const CAPACITY_BY_NGANH = { 'Điều dưỡng': 15 };
+// này), 20 cho ngành Y Khoa, 10 cho các ngành còn lại. Muốn tùy biến thêm ngành khác trong tương lai chỉ
+// cần mở rộng map này.
+const CAPACITY_BY_NGANH = { 'Điều dưỡng': 15, 'Y Khoa': 20 };
 const DEFAULT_CAPACITY = 10;
 function capacityForNganh(tenNganh) {
   return CAPACITY_BY_NGANH[tenNganh] || DEFAULT_CAPACITY;
