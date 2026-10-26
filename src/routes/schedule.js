@@ -3,6 +3,7 @@ const { pool } = require('../db');
 const { authRequired, resolveNganhAccess, ROLES_SUA_LICH } = require('../middleware');
 const { getSlotMaps } = require('../slots');
 const { logAction } = require('../audit');
+const { isPastDate } = require('../dateUtil');
 
 const router = express.Router();
 
@@ -25,6 +26,10 @@ router.post('/schedule', authRequired, requireSuaLich, async (req, res) => {
   const { nganh: tenNganh, dateISO, slotId, subject, content, room, teacher } = req.body;
   if (!subject || !String(subject).trim()) return res.status(400).json({ error: 'Vui lòng nhập tên môn học' });
   if (!room || !String(room).trim()) return res.status(400).json({ error: 'Vui lòng nhập phòng' });
+  // Chặn Trưởng bộ môn / Quản lý học tập tạo lịch học cho ngày đã qua — Admin vẫn tạo được bình thường.
+  if (req.user.role !== 'ADMIN' && isPastDate(dateISO)) {
+    return res.status(400).json({ error: 'Không thể tạo buổi học cho ngày đã qua.' });
+  }
   const nganh = await resolveNganhAccess(req, res, tenNganh);
   if (!nganh) return;
   const { oldToDbId } = await getSlotMaps();
@@ -52,6 +57,12 @@ router.post('/schedule/bulk', authRequired, requireSuaLich, async (req, res) => 
   if (fromISO > toISO) return res.status(400).json({ error: '"Từ ngày" phải trước hoặc bằng "Đến ngày"' });
   if (!subject || !String(subject).trim()) return res.status(400).json({ error: 'Vui lòng nhập tên môn học / bài học' });
   if (!room || !String(room).trim()) return res.status(400).json({ error: 'Vui lòng nhập phòng học' });
+  // Chặn Trưởng bộ môn / Quản lý học tập tạo hàng loạt lịch học lùi về ngày đã qua — chỉ cần kiểm tra
+  // "Từ ngày" vì đã validate fromISO <= toISO ở trên, nên nếu fromISO không phải ngày quá khứ thì mọi
+  // ngày trong khoảng cũng vậy. Admin vẫn tạo được bình thường.
+  if (req.user.role !== 'ADMIN' && isPastDate(fromISO)) {
+    return res.status(400).json({ error: 'Không thể tạo buổi học cho ngày đã qua.' });
+  }
   const nganh = await resolveNganhAccess(req, res, tenNganh);
   if (!nganh) return;
   const { oldToDbId } = await getSlotMaps();

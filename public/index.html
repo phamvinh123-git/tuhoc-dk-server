@@ -705,8 +705,12 @@ function openScheduleEditor(cellDateISO, slotId){
     <h3>${isNew ? 'Thiết lập buổi học mới' : 'Sửa lịch học'} — ${dowLabelFromISO(cellDateISO)} · ${slot.label}</h3>
     <div class="field" style="margin-bottom:10px;">
       <label>Ngày học</label>
-      <input id="schedDate" type="date" value="${cellDateISO}" ${isNew?'':'disabled'}>
-      ${isNew ? '<small class="hint">Có thể đổi sang ngày khác nếu cần (vẫn giữ đúng Slot đã chọn).</small>' : '<small class="hint">Không đổi được ngày của buổi đã tạo — hãy xóa và thiết lập lại nếu cần chuyển ngày.</small>'}
+      <input id="schedDate" type="date" value="${cellDateISO}" ${isNew?'':'disabled'} ${(isNew && currentUser.role!=='ADMIN')?`min="${isoDate(new Date())}"`:''}>
+      ${isNew
+        ? (currentUser.role!=='ADMIN'
+          ? '<small class="hint">Có thể đổi sang ngày khác nếu cần (vẫn giữ đúng Slot đã chọn). Không thể chọn ngày đã qua.</small>'
+          : '<small class="hint">Có thể đổi sang ngày khác nếu cần (vẫn giữ đúng Slot đã chọn).</small>')
+        : '<small class="hint">Không đổi được ngày của buổi đã tạo — hãy xóa và thiết lập lại nếu cần chuyển ngày.</small>'}
     </div>
     <div class="field" style="margin-bottom:10px;">
       <label>Slot học (khung giờ)</label>
@@ -809,11 +813,12 @@ window.openBulkCreateModal = function(){
     <p style="margin:0 0 14px;color:var(--muted);font-size:13px;">Dùng khi có sẵn kế hoạch dạng "Bài học – Ngày học" (ví dụ: 1 bài học kéo dài từ 19/8 đến 20/8). Điền 1 lần, hệ thống tự tạo buổi học cho từng ngày trong khoảng (kể cả Thứ 7, Chủ nhật), tại cùng 1 khung giờ đã chọn.</p>
     <div class="field" style="margin-bottom:10px;">
       <label>Từ ngày</label>
-      <input id="bulkFrom" type="date">
+      <input id="bulkFrom" type="date" ${currentUser.role!=='ADMIN'?`min="${isoDate(new Date())}"`:''}>
+      ${currentUser.role!=='ADMIN' ? '<small class="hint">Không thể chọn ngày đã qua.</small>' : ''}
     </div>
     <div class="field" style="margin-bottom:10px;">
       <label>Đến ngày</label>
-      <input id="bulkTo" type="date">
+      <input id="bulkTo" type="date" ${currentUser.role!=='ADMIN'?`min="${isoDate(new Date())}"`:''}>
     </div>
     <div class="field" style="margin-bottom:10px;">
       <label>Slot học (khung giờ)</label>

@@ -43,7 +43,20 @@ function isRegistrationClosed(ngayHoc) {
   return Date.now() >= registrationCutoffMs(ngayHoc);
 }
 
+// ==== Chặn TẠO buổi học mới cho ngày đã qua (giờ Việt Nam) ====
+// Dùng để chặn Trưởng bộ môn / Quản lý học tập tạo lịch học lùi về ngày trong quá khứ — Admin vẫn tạo được
+// bình thường (giống các quyền ghi đè khác Admin đang có sẵn, vd đăng ký thay khi đã quá hạn đăng ký).
+// So sánh dạng chuỗi 'YYYY-MM-DD' là đủ chính xác vì định dạng này sắp xếp y hệt thứ tự thời gian thật.
+function todayISOInICT() {
+  const nowIct = new Date(Date.now() + ICT_OFFSET_HOURS * 3600 * 1000);
+  return nowIct.getUTCFullYear() + '-' + String(nowIct.getUTCMonth() + 1).padStart(2, '0') + '-' + String(nowIct.getUTCDate()).padStart(2, '0');
+}
+function isPastDate(dateISO) {
+  return String(dateISO) < todayISOInICT();
+}
+
 module.exports = {
   allowedDateRange, isoDate, getMonday, WEEK_OFFSET_MIN, WEEK_OFFSET_MAX,
   isRegistrationClosed, registrationCutoffMs, REG_CUTOFF_HOUR_ICT,
+  isPastDate, todayISOInICT,
 };
