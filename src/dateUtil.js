@@ -26,6 +26,13 @@ function allowedDateRange() {
 const REG_CUTOFF_HOUR_ICT = 17;
 const ICT_OFFSET_HOURS = 7;
 
+// Mở rộng hạn đăng ký CHỈ CHO ĐÚNG NGÀY HẠN ĐÓ RƠI VÀO HÔM NAY (giờ VN) — dùng khi cần nới hạn đăng ký
+// tạm thời trong 1 ngày cụ thể (vd nới từ 17:00 lên 21:00). Tự động hết hiệu lực khi sang ngày khác vì so
+// sánh với "hôm nay" mỗi lần tính, không cần sửa code/deploy lại để revert. Đổi/xóa 2 dòng dưới đây khi hết
+// cần nới hạn (ví dụ xóa REG_CUTOFF_EXTENDED_DATE_ISO hoặc để nó là ngày đã qua để quay lại 17:00 như cũ).
+const REG_CUTOFF_EXTENDED_DATE_ISO = '2026-10-27'; // ngày (giờ VN) được nới hạn đăng ký
+const REG_CUTOFF_EXTENDED_HOUR_ICT = 21; // giờ nới hạn tới, chỉ áp dụng cho ngày ở trên
+
 // ngayHoc: Date (cột DATE Postgres — driver trả về mốc UTC 00:00 đúng ngày đã lưu) hoặc chuỗi 'YYYY-MM-DD'.
 // Trả về mốc thời gian (epoch ms, UTC) mà từ đó trở đi buổi học ngày `ngayHoc` bị khóa đăng ký.
 function registrationCutoffMs(ngayHoc) {
@@ -36,8 +43,13 @@ function registrationCutoffMs(ngayHoc) {
     const [yy, mm, dd] = String(ngayHoc).split('-').map(Number);
     y = yy; m = mm - 1; d = dd;
   }
-  // 17:00 giờ VN = 10:00 UTC cùng ngày => mốc khóa = 10:00 UTC của (ngày buổi học - 1 ngày).
-  return Date.UTC(y, m, d - 1, REG_CUTOFF_HOUR_ICT - ICT_OFFSET_HOURS, 0, 0, 0);
+  // Hạn đăng ký bình thường rơi vào 17:00 (giờ VN) của ngày hôm trước buổi học — nếu đúng ngày hôm trước đó
+  // là ngày đang được nới hạn (REG_CUTOFF_EXTENDED_DATE_ISO) thì dùng giờ nới hạn thay vì 17:00.
+  const cutoffDay = new Date(Date.UTC(y, m, d - 1));
+  const cutoffDayISO = cutoffDay.getUTCFullYear() + '-' + String(cutoffDay.getUTCMonth() + 1).padStart(2, '0') + '-' + String(cutoffDay.getUTCDate()).padStart(2, '0');
+  const cutoffHourIct = cutoffDayISO === REG_CUTOFF_EXTENDED_DATE_ISO ? REG_CUTOFF_EXTENDED_HOUR_ICT : REG_CUTOFF_HOUR_ICT;
+  // 17:00 giờ VN = 10:00 UTC cùng ngày => mốc khóa = (17:00 hoặc giờ nới hạn) UTC+7 của (ngày buổi học - 1 ngày).
+  return Date.UTC(y, m, d - 1, cutoffHourIct - ICT_OFFSET_HOURS, 0, 0, 0);
 }
 function isRegistrationClosed(ngayHoc) {
   return Date.now() >= registrationCutoffMs(ngayHoc);
