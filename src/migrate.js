@@ -9,7 +9,7 @@ async function migrate() {
   await pool.query(sql);
   console.log('[migrate] Đã tạo/cập nhật schema thành công.');
   await seedReferenceData();
-  await bumpDieuDuongCapacity();
+  await bumpNganhCapacities();
   await bootstrapAdmin();
 }
 
@@ -49,17 +49,25 @@ async function seedReferenceData() {
   console.log('[migrate] Đã đồng bộ danh sách Ngành + khung giờ học.');
 }
 
-// Tăng sức chứa/slot của các buổi học ĐÃ TẠO SẴN ở ngành Điều dưỡng lên 15 (khớp mức mặc định mới khi tạo
-// buổi học mới trong src/routes/schedule.js — chỉ đổi hardcode 10 ở đó thì các buổi CŨ vẫn giữ 10, nên cần
-// bù thêm bước này). Idempotent theo kiểu MỘT CHIỀU (chỉ tăng, không hạ): chỉ cập nhật các buổi đang <15,
-// nên chạy lại nhiều lần vô hại — không tự động hạ lại nếu sau này có người chỉnh về dưới 15 theo ý muốn.
-async function bumpDieuDuongCapacity() {
-  const r = await pool.query(
-    `UPDATE schedule_entries SET suc_chua = 15, updated_at = now()
-     WHERE nganh_id = (SELECT id FROM nganh WHERE ten_nganh = 'Điều dưỡng') AND suc_chua < 15`
-  );
-  if (r.rowCount > 0) {
-    console.log(`[migrate] Đã tăng sức chứa lên 15 sinh viên/slot cho ${r.rowCount} buổi học ngành Điều dưỡng đã tạo sẵn.`);
+// Tăng sức chứa/slot của các buổi học ĐÃ TẠO SẴN ở từng ngành lên đúng mức mặc định mới nhất (khớp
+// CAPACITY_BY_NGANH trong src/routes/schedule.js — chỉ đổi map đó thì các buổi CŨ đã tạo trước khi đổi vẫn
+// giữ nguyên sức chứa cũ, nên cần bù thêm bước này). Idempotent theo kiểu MỘT CHIỀU (chỉ tăng, không hạ):
+// chỉ cập nhật các buổi đang có suc_chua < mức mới, nên chạy lại nhiều lần vô hại — không tự động hạ lại
+// nếu sau này có người chỉnh về thấp hơn theo ý muốn. Thêm ngành/mức mới vào đây khi cần tăng tiếp.
+const CAPACITY_BUMPS = [
+  { ten: 'Điều dưỡng', sucChua: 15 },
+  { ten: 'Y Khoa', sucChua: 25 },
+];
+async function bumpNganhCapacities() {
+  for (const b of CAPACITY_BUMPS) {
+    const r = await pool.query(
+      `UPDATE schedule_entries SET suc_chua = $1, updated_at = now()
+       WHERE nganh_id = (SELECT id FROM nganh WHERE ten_nganh = $2) AND suc_chua < $1`,
+      [b.sucChua, b.ten]
+    );
+    if (r.rowCount > 0) {
+      console.log(`[migrate] Đã tăng sức chứa lên ${b.sucChua} sinh viên/slot cho ${r.rowCount} buổi học ngành ${b.ten} đã tạo sẵn.`);
+    }
   }
 }
 
