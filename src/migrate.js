@@ -10,6 +10,7 @@ async function migrate() {
   console.log('[migrate] Đã tạo/cập nhật schema thành công.');
   await seedReferenceData();
   await bumpNganhCapacities();
+  await reduceYKhoaCapacity();
   await bootstrapAdmin();
 }
 
@@ -56,7 +57,6 @@ async function seedReferenceData() {
 // nếu sau này có người chỉnh về thấp hơn theo ý muốn. Thêm ngành/mức mới vào đây khi cần tăng tiếp.
 const CAPACITY_BUMPS = [
   { ten: 'Điều dưỡng', sucChua: 15 },
-  { ten: 'Y Khoa', sucChua: 25 },
 ];
 async function bumpNganhCapacities() {
   for (const b of CAPACITY_BUMPS) {
@@ -68,6 +68,26 @@ async function bumpNganhCapacities() {
     if (r.rowCount > 0) {
       console.log(`[migrate] Đã tăng sức chứa lên ${b.sucChua} sinh viên/slot cho ${r.rowCount} buổi học ngành ${b.ten} đã tạo sẵn.`);
     }
+  }
+}
+
+// Giảm sức chứa/slot của các buổi học ĐÃ TẠO SẴN ở ngành Y Khoa xuống lại mức mặc định 10 (trước đó từng
+// tăng lên 20 rồi 25, nay theo yêu cầu giảm về 10 — khớp CAPACITY_BY_NGANH mới trong
+// src/routes/schedule.js, ngành Y Khoa không còn override riêng nữa). Idempotent: chỉ cập nhật các buổi
+// đang có suc_chua > 10, chạy lại nhiều lần vô hại. Nếu buổi nào đã có NHIỀU HƠN 10 sinh viên đăng ký sẵn
+// thì KHÔNG hủy bớt đăng ký của ai cả — chỉ hạ sức chứa xuống 10 nên buổi đó sẽ hiện đầy/khóa (không nhận
+// thêm người mới) cho tới khi có người tự hủy bớt, dữ liệu đăng ký cũ vẫn giữ nguyên an toàn. Cũng tính lại
+// trang_thai ngay trong câu UPDATE (giống logic ở route toggle-lock) để không bị "khóa ảo"/"mở ảo" sai lệch
+// so với sức chứa mới — vì UPDATE trực tiếp suc_chua không tự kích hoạt trigger đồng bộ trang_thai.
+async function reduceYKhoaCapacity() {
+  const r = await pool.query(
+    `UPDATE schedule_entries
+     SET suc_chua = 10, updated_at = now(),
+         trang_thai = CASE WHEN khoa_thu_cong THEN 'khoa' WHEN so_luong_dk >= 10 THEN 'khoa' ELSE 'mo' END
+     WHERE nganh_id = (SELECT id FROM nganh WHERE ten_nganh = 'Y Khoa') AND suc_chua > 10`
+  );
+  if (r.rowCount > 0) {
+    console.log(`[migrate] Đã giảm sức chứa xuống 10 sinh viên/slot cho ${r.rowCount} buổi học ngành Y Khoa đã tạo sẵn.`);
   }
 }
 
