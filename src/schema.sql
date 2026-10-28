@@ -76,13 +76,31 @@ DECLARE
     v_suc_chua   SMALLINT;
     v_trang_thai VARCHAR(10);
     v_khoa_tay   BOOLEAN;
+    v_subject    VARCHAR(200);
+    v_nganh_id   INT;
+    v_trung_mon  INT;
 BEGIN
-    SELECT suc_chua, trang_thai, khoa_thu_cong INTO v_suc_chua, v_trang_thai, v_khoa_tay
+    SELECT suc_chua, trang_thai, khoa_thu_cong, subject, nganh_id
+    INTO v_suc_chua, v_trang_thai, v_khoa_tay, v_subject, v_nganh_id
     FROM schedule_entries WHERE id = NEW.schedule_entry_id
     FOR UPDATE;
 
     IF v_khoa_tay THEN
         RAISE EXCEPTION 'Slot đã bị khóa bởi Cô trưởng bộ môn' USING ERRCODE = 'P0001';
+    END IF;
+
+    -- Mỗi sinh viên chỉ được đăng ký ĐÚNG 1 slot cho 1 bài học (so khớp theo tên môn học + ngành) — chặn
+    -- đăng ký slot khác (ngày/khung giờ khác) của CÙNG bài học đó, dù slot hiện tại vẫn còn chỗ.
+    SELECT count(*) INTO v_trung_mon
+    FROM registrations r
+    JOIN schedule_entries se2 ON se2.id = r.schedule_entry_id
+    WHERE r.student_id = NEW.student_id
+      AND se2.nganh_id = v_nganh_id
+      AND se2.subject = v_subject
+      AND r.schedule_entry_id <> NEW.schedule_entry_id;
+
+    IF v_trung_mon > 0 THEN
+        RAISE EXCEPTION 'Sinh viên đã đăng ký 1 slot cho bài học "%" rồi, không thể đăng ký thêm slot khác cho cùng bài học này', v_subject USING ERRCODE = 'P0003';
     END IF;
 
     SELECT count(*) INTO v_so_luong FROM registrations WHERE schedule_entry_id = NEW.schedule_entry_id;

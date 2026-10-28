@@ -6,9 +6,9 @@ const { isRegistrationClosed } = require('../dateUtil');
 
 const router = express.Router();
 
-// P0002 (đã đủ số lượng tối đa) KHÔNG dùng message tĩnh ở đây — sức chứa giờ khác nhau theo ngành (10 hoặc
-// 15), nên dùng thẳng message do trigger fn_check_slot_capacity() (schema.sql) raise ra, đã có đúng số
-// động qua v_suc_chua.
+// P0002 (đã đủ số lượng tối đa) và P0003 (đã đăng ký bài học này ở slot khác) KHÔNG dùng message tĩnh ở
+// đây — cả 2 đều cần số/tên động (sức chứa khác nhau theo ngành, tên bài học khác nhau theo buổi), nên
+// dùng thẳng message do trigger fn_check_slot_capacity() (schema.sql) raise ra.
 const PG_ERROR_MESSAGES = {
   P0001: 'Slot đã bị khóa bởi Cô trưởng bộ môn',
 };
@@ -47,7 +47,7 @@ router.post('/registrations', authRequired, async (req, res) => {
     res.status(201).json({ ok: true });
   } catch (e) {
     if (e.code === '23505') return res.status(409).json({ error: 'Sinh viên đã đăng ký slot này rồi' });
-    if (e.code === 'P0002') return res.status(400).json({ error: e.message });
+    if (e.code === 'P0002' || e.code === 'P0003') return res.status(400).json({ error: e.message });
     if (PG_ERROR_MESSAGES[e.code]) return res.status(400).json({ error: PG_ERROR_MESSAGES[e.code] });
     throw e;
   }
