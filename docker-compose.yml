@@ -1,0 +1,47 @@
+# Triển khai trên VPS riêng (vd VPS Viettel) bằng Docker Compose — thay thế cho Render.
+# Gồm 2 service: "app" (Node.js, build từ Dockerfile có sẵn) và "db" (PostgreSQL, lưu dữ liệu bền vững
+# qua named volume "dbdata" nên không mất dữ liệu khi container restart/update).
+#
+# Cách dùng: xem README.deploy.md mục "Cách 3 — VPS riêng với Docker Compose".
+#   1. Tạo file .env (copy từ .env.example, điền giá trị thật)
+#   2. docker compose up -d --build
+#
+# Lệnh cập nhật sau này khi có bản vá mới (đã git pull code mới):
+#   docker compose up -d --build
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-tuhoc}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Vui lòng đặt POSTGRES_PASSWORD trong file .env}
+      POSTGRES_DB: ${POSTGRES_DB:-tuhoc_dk}
+    volumes:
+      - dbdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-tuhoc} -d ${POSTGRES_DB:-tuhoc_dk}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # Không mở cổng 5432 ra ngoài VPS — chỉ "app" trong cùng mạng Docker nội bộ mới kết nối được, an toàn hơn.
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-tuhoc}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-tuhoc_dk}
+      JWT_SECRET: ${JWT_SECRET:?Vui lòng đặt JWT_SECRET trong file .env}
+      PORT: 3000
+      ADMIN_BOOTSTRAP_USERNAME: ${ADMIN_BOOTSTRAP_USERNAME:-}
+      ADMIN_BOOTSTRAP_PASSWORD_HASH: ${ADMIN_BOOTSTRAP_PASSWORD_HASH:-}
+    ports:
+      # Chỉ bind vào 127.0.0.1 — Nginx trên VPS sẽ reverse-proxy từ domain (cổng 80/443) vào cổng 3000 này,
+      # không cho truy cập thẳng cổng 3000 từ internet.
+      - "127.0.0.1:3000:3000"
+
+volumes:
+  dbdata:

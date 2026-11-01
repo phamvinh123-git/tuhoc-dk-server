@@ -21,12 +21,114 @@ mọi thứ đọc/ghi thật qua API, nhiều người dùng cùng lúc sẽ th
    - Tự sinh `JWT_SECRET` ngẫu nhiên
 3. Đợi build xong — Render cấp cho bạn 1 URL dạng `https://tuhoc-dk.onrender.com`, dùng được ngay, có HTTPS sẵn.
 
-## Cách 2 — Bất kỳ nền tảng nào chạy Docker (Railway, Fly.io, VPS riêng...)
+## Cách 2 — Bất kỳ nền tảng nào chạy Docker (Railway, Fly.io...)
 
 1. Build image từ `server/Dockerfile`.
 2. Cấp 1 Postgres (Railway/Fly đều có addon managed Postgres, hoặc tự dựng).
 3. Set `DATABASE_URL`, `JWT_SECRET` (và `PGSSL=require` nếu cần) cho container.
 4. Chạy container — image tự chạy `migrate` (tạo bảng) rồi khởi động server ở cổng 3000.
+
+## Cách 3 — VPS riêng với Docker Compose (Ubuntu, vd VPS Viettel)
+
+Dùng `docker-compose.yml` có sẵn trong thư mục này — tự chạy cả app lẫn Postgres trong 2 container, dữ
+liệu Postgres lưu bền vững qua named volume (không mất khi cập nhật/restart container). Nginx chạy trực
+tiếp trên VPS (không phải trong container) để nhận HTTPS và chuyển tiếp vào app.
+
+### Bước 1 — Cài Docker (chỉ cần làm 1 lần, SSH vào VPS rồi chạy)
+
+```bash
+curl -fsSL https://get.docker.com | sudo sh
+sudo usermod -aG docker $USER
+# Thoát ra rồi SSH lại (để áp dụng quyền nhóm docker vừa thêm) trước khi làm Bước 2
+```
+
+### Bước 2 — Lấy code về VPS
+
+```bash
+sudo apt update && sudo apt install -y git
+git clone https://github.com/phamvinh123-git/tuhoc-dk-server.git
+cd tuhoc-dk-server
+```
+
+### Bước 3 — Tạo file cấu hình `.env`
+
+```bash
+cp .env.example .env
+# Sinh 2 chuỗi ngẫu nhiên rồi dán vào .env (POSTGRES_PASSWORD và JWT_SECRET):
+openssl rand -hex 24   # dùng cho POSTGRES_PASSWORD
+openssl rand -hex 32   # dùng cho JWT_SECRET
+nano .env              # dán 2 giá trị vừa sinh vào đúng chỗ, lưu lại (Ctrl+O, Enter, Ctrl+X)
+```
+
+### Bước 4 — Build & chạy
+
+```bash
+docker compose up -d --build
+docker compose logs -f app   # xem log, kỳ vọng thấy "[migrate] Đã tạo/cập nhật schema thành công." rồi "[server] Đang chạy tại http://localhost:3000"
+```
+
+App lúc này đã chạy, nhưng chỉ nghe ở `127.0.0.1:3000` (không truy cập được từ internet) — cần Nginx ở
+Bước 5 để mở ra ngoài qua domain kèm HTTPS.
+
+### Bước 5 — Cài Nginx + trỏ domain
+
+1. Trên trang quản lý domain, tạo 1 bản ghi DNS loại **A** trỏ subdomain bạn chọn (vd `tuhoc.ten-mien-cua-ban.vn`) về đúng **địa chỉ IP của VPS**. Đợi vài phút tới khi DNS cập nhật (kiểm tra bằng `ping tuhoc.ten-mien-cua-ban.vn` từ máy tính của bạn, thấy đúng IP VPS là được).
+2. Cài Nginx + Certbot:
+   ```bash
+   sudo apt install -y nginx certbot python3-certbot-nginx
+   ```
+3. Copy cấu hình mẫu (file `deploy/nginx-tuhoc-dk.conf` trong repo) vào Nginx, sửa `YOUR_SUBDOMAIN` thành domain thật:
+   ```bash
+   sudo cp deploy/nginx-tuhoc-dk.conf /etc/nginx/sites-available/tuhoc-dk
+   sudo sed -i 's/YOUR_SUBDOMAIN/tuhoc.ten-mien-cua-ban.vn/' /etc/nginx/sites-available/tuhoc-dk
+   sudo ln -s /etc/nginx/sites-available/tuhoc-dk /etc/nginx/sites-enabled/
+   sudo nginx -t && sudo systemctl reload nginx
+   ```
+4. Lấy chứng chỉ HTTPS miễn phí (Let's Encrypt) — Certbot tự sửa luôn cấu hình Nginx để bật HTTPS:
+   ```bash
+   sudo certbot --nginx -d tuhoc.ten-mien-cua-ban.vn
+   ```
+5. Xong — truy cập `https://tuhoc.ten-mien-cua-ban.vn` là thấy ứng dụng. Certbot tự động gia hạn chứng chỉ trước khi hết hạn, không cần làm gì thêm.
+
+### Tạo tài khoản Admin đầu tiên
+
+Vì `.env` không đặt `ADMIN_BOOTSTRAP_*`, bảng `users` sẽ trống sau khi deploy — tạo tài khoản Admin đầu tiên bằng lệnh (chạy ngay trong container `app`):
+
+```bash
+docker compose exec app node -e "
+const bcrypt = require('bcryptjs');
+const { pool } = require('./src/db');
+(async () => {
+  const hash = await bcrypt.hash('MẬT_KHẨU_MẠNH_CỦA_BẠN', 10);
+  await pool.query(
+    \`INSERT INTO users (username, password_hash, ho_ten, role, dang_hoat_dong) VALUES ('admin', \$1, 'Quản trị hệ thống', 'ADMIN', TRUE)\`,
+    [hash]
+  );
+  console.log('Đã tạo tài khoản admin đầu tiên.');
+  await pool.end();
+})();
+"
+```
+
+### Cập nhật khi có bản vá mới
+
+Thay vì `git push` lên GitHub rồi đợi Render tự deploy như trước, giờ SSH vào VPS rồi chạy:
+
+```bash
+cd tuhoc-dk-server
+git pull
+docker compose up -d --build
+```
+
+### Sao lưu dữ liệu định kỳ (khuyến nghị)
+
+Dữ liệu Postgres nằm trong Docker volume `dbdata` trên chính VPS — nếu VPS gặp sự cố phần cứng mà không
+sao lưu thì mất hết, khác với Render (tự sao lưu phía nhà cung cấp). Nên định kỳ chạy lệnh sau để xuất dữ
+liệu ra 1 file (và tải file đó về máy khác/lưu đám mây để an toàn):
+
+```bash
+docker compose exec db pg_dump -U tuhoc tuhoc_dk > backup-$(date +%F).sql
+```
 
 ## Gieo dữ liệu mẫu (tuỳ chọn — CÂN NHẮC KỸ trước khi bật trên môi trường public)
 
