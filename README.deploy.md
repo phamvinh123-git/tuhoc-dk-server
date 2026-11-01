@@ -110,14 +110,47 @@ const { pool } = require('./src/db');
 "
 ```
 
-### Cập nhật khi có bản vá mới
+### Cập nhật khi có bản vá mới (thủ công)
 
-Thay vì `git push` lên GitHub rồi đợi Render tự deploy như trước, giờ SSH vào VPS rồi chạy:
+SSH vào VPS rồi chạy:
 
 ```bash
 cd tuhoc-dk-server
 git pull
 docker compose up -d --build
+```
+
+### Tự động deploy khi có code mới (không cần SSH vào tay mỗi lần)
+
+VPS không có cơ chế "nghe" GitHub tự động như Render, nhưng có thể làm tương tự bằng cách cho VPS **tự
+kiểm tra định kỳ** xem nhánh `main` trên GitHub có commit mới không, có thì tự `git pull` + deploy lại —
+dùng script `deploy/auto-deploy.sh` có sẵn trong repo, kèm cron chạy mỗi 2 phút.
+
+**Lưu ý quan trọng:** cách này chỉ tự động hoá được **phần deploy trên VPS**. Code mới vẫn cần được
+**đẩy lên GitHub trước đã** (bằng `git push`) thì VPS mới có cái để tự lấy về — bước này hiện vẫn cần bạn
+(hoặc 1 người/máy có quyền push) thực hiện, vì trợ lý AI đang hỗ trợ bạn ở đây không có quyền tự đẩy code
+thẳng lên GitHub của bạn.
+
+Thiết lập 1 lần duy nhất trên VPS:
+
+```bash
+cd ~/tuhoc-dk-server
+crontab -e
+```
+
+Thêm dòng sau vào cuối file (sửa `/home/UBUNTU_USER/tuhoc-dk-server` thành đúng đường dẫn thật của bạn,
+xem bằng lệnh `pwd` khi đang đứng trong thư mục repo), lưu lại:
+
+```
+*/2 * * * * /home/UBUNTU_USER/tuhoc-dk-server/deploy/auto-deploy.sh
+```
+
+Từ giờ cứ mỗi 2 phút VPS sẽ tự kiểm tra, có code mới trên GitHub là tự `git pull` + `docker compose up -d
+--build` ngay, không cần SSH vào tay nữa. Xem log các lần tự deploy tại file `deploy-cron.log` trong thư
+mục repo:
+
+```bash
+tail -f deploy-cron.log
 ```
 
 ### Sao lưu dữ liệu định kỳ (khuyến nghị)
