@@ -113,7 +113,11 @@ router.put('/admin/accounts/:username', async (req, res) => {
   const sets = ['ho_ten=$1'];
   const params = [String(hoTen).trim()];
   if (nganhId !== undefined) { sets.push(`nganh_id=$${params.length + 1}`); params.push(nganhId); }
-  if (password) { sets.push(`password_hash=$${params.length + 1}`); params.push(await bcrypt.hash(password, 10)); }
+  if (password) {
+    sets.push(`password_hash=$${params.length + 1}`); params.push(await bcrypt.hash(password, 10));
+    // Mật khẩu do Quản trị viên đặt hộ -> chủ tài khoản phải tự đổi lại ở lần đăng nhập kế tiếp (trừ khi Admin tự đặt cho chính mình).
+    if (u.id !== req.user.id) sets.push('phai_doi_mat_khau=TRUE');
+  }
   params.push(u.id);
   await pool.query(`UPDATE users SET ${sets.join(', ')} WHERE id=$${params.length}`, params);
 

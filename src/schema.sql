@@ -189,3 +189,9 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS actor_ma_sv VARCHAR(20);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs (created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs (action);
+
+-- Đăng nhập bằng Mã SV hoặc Số điện thoại + bắt buộc đổi mật khẩu lần đầu (tài khoản nhập hàng loạt từ Excel
+-- với mật khẩu mặc định, hoặc được Quản trị viên đặt lại mật khẩu). ALTER ... IF NOT EXISTS an toàn khi chạy lại.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS phai_doi_mat_khau BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE students ADD COLUMN IF NOT EXISTS so_dien_thoai VARCHAR(15);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_students_so_dien_thoai ON students (so_dien_thoai) WHERE so_dien_thoai IS NOT NULL;

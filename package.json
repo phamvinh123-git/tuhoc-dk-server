@@ -8,6 +8,7 @@
     "dev": "nodemon src/server.js",
     "migrate": "node src/migrate.js",
     "seed": "node src/seed.js",
+    "import-students": "node -r dotenv/config src/importStudents.js",
     "release": "node src/migrate.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -22,6 +23,7 @@
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
+    "exceljs": "^4.4.0",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
     "pg": "^8.23.0"

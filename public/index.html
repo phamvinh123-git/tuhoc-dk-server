@@ -439,9 +439,10 @@ function screenLogin(){
       <h1 style="text-align:center;">Đăng ký Tự học</h1>
       <div class="desc" style="text-align:center;margin-bottom:6px;">Phân hiệu Thanh Hóa · Đại học Y Hà Nội</div>
       <div class="desc">Đăng nhập để tiếp tục. Mỗi tài khoản chỉ thấy đúng ngành và đúng vai trò được cấp — riêng Quản trị viên xem/thao tác được trên mọi ngành, mọi vai trò.</div>
-      <div class="field"><label>Tên đăng nhập</label><input id="loginUser" onkeydown="if(event.key==='Enter')doLogin()"></div>
-      <div class="field"><label>Mật khẩu</label><input id="loginPass" type="password" placeholder="••••••" onkeydown="if(event.key==='Enter')doLogin()"></div>
+      <div class="field"><label>Mã sinh viên / Số điện thoại / Tên đăng nhập</label><input id="loginUser" placeholder="vd: 2650220063 hoặc 0912345678" autocomplete="username" onkeydown="if(event.key==='Enter')doLogin()"></div>
+      <div class="field"><label>Mật khẩu</label><input id="loginPass" type="password" placeholder="••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"></div>
       <button class="btn" style="width:100%;" onclick="doLogin()">Đăng nhập</button>
+      <div class="desc" style="margin-top:10px;margin-bottom:0;">Sinh viên đăng nhập lần đầu: dùng mật khẩu <b>123456</b>, hệ thống sẽ yêu cầu đổi mật khẩu mới ngay.</div>
       <div class="switch-line">Chưa có tài khoản? <a onclick="goRegister()">Đăng ký tài khoản sinh viên</a></div>
     </div>
   </div>`;
@@ -467,17 +468,10 @@ function screenRegister(){
 window.goRegister = function(){ authScreen = 'register'; render(); };
 window.goLogin = function(){ authScreen = 'login'; render(); };
 function userFromApi(u){
-  return { id:u.id, username:u.username, hoTen:u.ho_ten, role:u.role, nganh:u.nganh, ma_sv:u.ma_sv, student_id:u.student_id };
+  return { id:u.id, username:u.username, hoTen:u.ho_ten, role:u.role, nganh:u.nganh, ma_sv:u.ma_sv, student_id:u.student_id, phaiDoiMatKhau:!!u.phai_doi_mat_khau };
 }
-window.doLogin = async function(){
-  const u = document.getElementById('loginUser').value;
-  const p = document.getElementById('loginPass').value;
-  if(!u || !p) return toast('Vui lòng nhập tên đăng nhập và mật khẩu');
-  let res;
-  try{ res = await apiFetch('/auth/login', {method:'POST', body:JSON.stringify({username:u, password:p})}); }
-  catch(e){ return toast(e.message); }
-  setAuthToken(res.token);
-  const acc = userFromApi(res.user);
+// Sau khi đăng nhập (hoặc khôi phục phiên / vừa đổi xong mật khẩu bắt buộc): nạp dữ liệu ngành và chọn màn hình đầu tiên.
+async function enterApp(acc){
   currentUser = acc;
   weekOffset = 0;
   selectedEquipKey = null;
@@ -494,7 +488,57 @@ window.doLogin = async function(){
     currentRole = acc.role;
     currentStudent = acc.role === 'SINH_VIEN' ? students.find(s=>s.ma_sv===acc.ma_sv) : (curStudents()[0] || null);
   }
+}
+window.doLogin = async function(){
+  const u = document.getElementById('loginUser').value;
+  const p = document.getElementById('loginPass').value;
+  if(!u || !p) return toast('Vui lòng nhập Mã sinh viên / Số điện thoại và mật khẩu');
+  let res;
+  try{ res = await apiFetch('/auth/login', {method:'POST', body:JSON.stringify({username:u, password:p})}); }
+  catch(e){ return toast(e.message); }
+  setAuthToken(res.token);
+  const acc = userFromApi(res.user);
+  if(acc.phaiDoiMatKhau){
+    // Lần đăng nhập đầu (mật khẩu mặc định) — chưa nạp dữ liệu, chỉ hiện màn hình bắt buộc đổi mật khẩu.
+    currentUser = acc;
+    render();
+    return;
+  }
+  try{ await enterApp(acc); }catch(e){ return toast(e.message); }
   toast(`Xin chào, ${acc.hoTen}!`);
+  render();
+};
+
+// Màn hình BẮT BUỘC đổi mật khẩu (tài khoản mới nhập từ danh sách, hoặc được Quản trị viên đặt lại mật khẩu).
+// Không có nút Hủy — chỉ có thể đổi mật khẩu hoặc đăng xuất. Server cũng chặn mọi API khác cho tới khi đổi xong.
+function screenForcePassword(){
+  return `
+  <div class="auth-wrap">
+    <div class="auth-card">
+      <h1>Đổi mật khẩu lần đầu</h1>
+      <div class="desc">Xin chào <b>${currentUser.hoTen}</b>${currentUser.ma_sv?` (${currentUser.ma_sv})`:''}. Vì lý do bảo mật, bạn cần đặt mật khẩu mới trước khi sử dụng hệ thống.</div>
+      <div class="field"><label>Mật khẩu hiện tại</label><input id="fpOld" type="password" placeholder="mật khẩu vừa dùng để đăng nhập" autocomplete="current-password" onkeydown="if(event.key==='Enter')document.getElementById('fpNew').focus()"></div>
+      <div class="field"><label>Mật khẩu mới</label><input id="fpNew" type="password" placeholder="tối thiểu 6 ký tự" autocomplete="new-password" onkeydown="if(event.key==='Enter')document.getElementById('fpNew2').focus()"></div>
+      <div class="field"><label>Nhập lại mật khẩu mới</label><input id="fpNew2" type="password" autocomplete="new-password" onkeydown="if(event.key==='Enter')doForcePassword()"></div>
+      <button class="btn" style="width:100%;" onclick="doForcePassword()">Lưu mật khẩu mới</button>
+      <div class="switch-line"><a onclick="doLogout()">Đăng xuất</a></div>
+    </div>
+  </div>`;
+}
+window.doForcePassword = async function(){
+  const matKhauCu = document.getElementById('fpOld').value;
+  const matKhauMoi = document.getElementById('fpNew').value;
+  const matKhauMoi2 = document.getElementById('fpNew2').value;
+  if(!matKhauCu || !matKhauMoi) return toast('Vui lòng nhập đầy đủ mật khẩu hiện tại và mật khẩu mới');
+  if(matKhauMoi.length < 6) return toast('Mật khẩu mới cần tối thiểu 6 ký tự');
+  if(matKhauMoi === '123456') return toast('Không được dùng lại mật khẩu mặc định 123456');
+  if(matKhauMoi !== matKhauMoi2) return toast('Mật khẩu mới nhập lại không khớp');
+  try{
+    await apiFetch('/auth/password', {method:'PUT', body:JSON.stringify({matKhauCu, matKhauMoi, matKhauMoi2})});
+  }catch(e){ return toast(e.message); }
+  const acc = Object.assign({}, currentUser, {phaiDoiMatKhau:false});
+  try{ await enterApp(acc); }catch(e){ return toast(e.message); }
+  toast('Đã đổi mật khẩu thành công');
   render();
 };
 window.doLogout = function(){
@@ -1373,13 +1417,14 @@ window.loadMoreAuditLog = async function(){
 
 /* ============================== MAIN RENDER ============================== */
 function render(){
-  document.getElementById('appTitle').textContent = currentUser ? `Đăng ký Tự học — Ngành ${currentNganh}` : 'Đăng ký Tự học';
+  document.getElementById('appTitle').textContent = (currentUser && !currentUser.phaiDoiMatKhau) ? `Đăng ký Tự học — Ngành ${currentNganh}` : 'Đăng ký Tự học';
   renderHeaderRight();
   const app = document.getElementById('app');
   if(!currentUser){
     app.innerHTML = authScreen==='register' ? screenRegister() : screenLogin();
     return;
   }
+  if(currentUser.phaiDoiMatKhau){ app.innerHTML = screenForcePassword(); return; }
   if(currentUser.role==='ADMIN' && currentRole==='ADMIN_ACCOUNTS'){ app.innerHTML = screenAdminAccounts(); return; }
   if(currentUser.role==='ADMIN' && currentRole==='AUDIT_LOG'){ app.innerHTML = screenAuditLog(); return; }
   if(currentRole==='SINH_VIEN') app.innerHTML = screenStudent();
@@ -1400,6 +1445,10 @@ function hasAllNganhAccess(u){ return !!u && (u.role === 'ADMIN' || u.nganh === 
 function renderHeaderRight(){
   const el = document.getElementById('headerRight');
   if(!currentUser){ el.innerHTML = ''; return; }
+  if(currentUser.phaiDoiMatKhau){
+    el.innerHTML = `<div class="user-badge">👤 ${currentUser.hoTen} <button class="btn secondary" style="padding:5px 10px;font-size:12px;" onclick="doLogout()">Đăng xuất</button></div>`;
+    return;
+  }
   const isAdmin = currentUser.role === 'ADMIN';
   const canSwitchNganh = hasAllNganhAccess(currentUser);
   let html = '<div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;">';
@@ -1535,18 +1584,8 @@ async function init(){
     try{
       const me = await apiFetch('/auth/me');
       const acc = userFromApi(me.user);
-      currentUser = acc;
-      const hasAllNganh = acc.role === 'ADMIN' || acc.nganh === null;
-      const targetNganh = hasAllNganh ? NGANH_LIST[0] : acc.nganh;
-      await loadNganhData(targetNganh);
-      currentNganh = targetNganh;
-      if(acc.role === 'ADMIN'){
-        currentRole = 'TRUONG_BO_MON';
-        currentStudent = curStudents()[0] || null;
-      } else {
-        currentRole = acc.role;
-        currentStudent = acc.role === 'SINH_VIEN' ? students.find(s=>s.ma_sv===acc.ma_sv) : (curStudents()[0] || null);
-      }
+      if(acc.phaiDoiMatKhau) currentUser = acc;
+      else await enterApp(acc);
     }catch(e){
       // Token hết hạn/không hợp lệ — quay về màn đăng nhập, không cần báo lỗi gây khó chịu cho người dùng.
       setAuthToken(null);

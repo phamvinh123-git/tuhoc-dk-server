@@ -21,7 +21,7 @@ async function authRequired(req, res, next) {
     if (!token) return res.status(401).json({ error: 'Chưa đăng nhập' });
     const payload = verifyToken(token);
     const r = await pool.query(
-      `SELECT u.id, u.username, u.ho_ten, u.role, u.dang_hoat_dong, u.nganh_id, n.ten_nganh,
+      `SELECT u.id, u.username, u.ho_ten, u.role, u.dang_hoat_dong, u.nganh_id, u.phai_doi_mat_khau, n.ten_nganh,
               s.id AS student_id, s.ma_sv, s.to_lop
        FROM users u
        LEFT JOIN nganh n ON n.id = u.nganh_id
@@ -42,7 +42,15 @@ async function authRequired(req, res, next) {
       student_id: row.student_id || null,
       ma_sv: row.ma_sv || null,
       to_lop: row.to_lop || null,
+      phai_doi_mat_khau: !!row.phai_doi_mat_khau,
     };
+    // Tài khoản đang dùng mật khẩu mặc định/được đặt lại: chặn MỌI thao tác ở phía server (không chỉ ẩn giao
+    // diện) cho tới khi tự đổi mật khẩu — chỉ cho xem thông tin của mình và gọi API đổi mật khẩu.
+    if (req.user.phai_doi_mat_khau) {
+      const path = req.originalUrl.split('?')[0];
+      const allowed = (req.method === 'GET' && path === '/api/auth/me') || (req.method === 'PUT' && path === '/api/auth/password');
+      if (!allowed) return res.status(403).json({ error: 'Bạn cần đổi mật khẩu trước khi sử dụng hệ thống', code: 'PHAI_DOI_MAT_KHAU' });
+    }
     next();
   } catch (e) {
     return res.status(401).json({ error: 'Phiên đăng nhập không hợp lệ hoặc đã hết hạn' });
