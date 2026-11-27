@@ -4,6 +4,10 @@ const { pool } = require('../db');
 const { signToken } = require('../auth');
 const { authRequired } = require('../middleware');
 const { logAction } = require('../audit');
+const { normalizePhone } = require('../phone');
+
+// Mật khẩu mặc định khi nhập sinh viên hàng loạt — không cho phép đặt lại làm mật khẩu mới.
+const MAT_KHAU_MAC_DINH = '123456';
 
 const router = express.Router();
 
@@ -16,27 +20,36 @@ function userView(row) {
     nganh: row.ten_nganh || null,
     ma_sv: row.ma_sv || null,
     student_id: row.student_id || null,
+    phai_doi_mat_khau: !!row.phai_doi_mat_khau,
   };
 }
 
 router.post('/login', async (req, res) => {
   const username = String(req.body.username || '').trim().toLowerCase();
   const password = String(req.body.password || '');
-  if (!username || !password) return res.status(400).json({ error: 'Vui lòng nhập tên đăng nhập và mật khẩu' });
+  if (!username || !password) return res.status(400).json({ error: 'Vui lòng nhập Mã sinh viên hoặc Số điện thoại và mật khẩu' });
 
+  // Sinh viên chỉ đăng nhập bằng Mã sinh viên hoặc Số điện thoại đã đăng ký. Tài khoản cán bộ (Admin, Trưởng bộ
+  // môn, Cố vấn, Quản lý — không có Mã SV/SĐT) vẫn đăng nhập bằng tên đăng nhập được cấp. Ưu tiên khớp cán bộ
+  // trước, rồi Mã SV, rồi SĐT — để tài khoản cán bộ không bao giờ bị "che" bởi sinh viên.
   const r = await pool.query(
-    `SELECT u.id, u.username, u.password_hash, u.ho_ten, u.role, u.dang_hoat_dong, u.nganh_id, n.ten_nganh,
-            s.id AS student_id, s.ma_sv
+    `SELECT u.id, u.username, u.password_hash, u.ho_ten, u.role, u.dang_hoat_dong, u.nganh_id, u.phai_doi_mat_khau,
+            n.ten_nganh, s.id AS student_id, s.ma_sv
      FROM users u
      LEFT JOIN nganh n ON n.id = u.nganh_id
      LEFT JOIN students s ON s.user_id = u.id
-     WHERE lower(u.username) = $1`,
-    [username]
+     WHERE (u.role <> 'SINH_VIEN' AND lower(u.username) = $1)
+        OR lower(s.ma_sv) = $1
+        OR ($2::text IS NOT NULL AND s.so_dien_thoai = $2)
+     ORDER BY (u.role <> 'SINH_VIEN' AND lower(u.username) = $1) DESC, (lower(s.ma_sv) = $1) DESC NULLS LAST
+     LIMIT 1`,
+    [username, normalizePhone(username)]
   );
   const row = r.rows[0];
-  if (!row) return res.status(401).json({ error: 'Sai tên đăng nhập hoặc mật khẩu' });
+  const SAI = 'Sai Mã sinh viên/Số điện thoại hoặc mật khẩu';
+  if (!row) return res.status(401).json({ error: SAI });
   const ok = await bcrypt.compare(password, row.password_hash);
-  if (!ok) return res.status(401).json({ error: 'Sai tên đăng nhập hoặc mật khẩu' });
+  if (!ok) return res.status(401).json({ error: SAI });
   if (!row.dang_hoat_dong) return res.status(403).json({ error: 'Tài khoản đã bị khóa — liên hệ Quản trị viên để được mở lại.' });
 
   const token = signToken({ uid: row.id });
@@ -45,6 +58,9 @@ router.post('/login', async (req, res) => {
 });
 
 router.post('/register', async (req, res) => {
+  // Bản chính thức: tài khoản sinh viên được nhập sẵn từ danh sách của trường (npm run import-students),
+  // không cho tự tạo tài khoản nữa. Đặt TU_DANG_KY=1 trong .env nếu cần bật lại.
+  if (process.env.TU_DANG_KY !== '1') return res.status(403).json({ error: 'Không hỗ trợ tự đăng ký tài khoản — liên hệ phòng Đào tạo nếu chưa có tài khoản.' });
   const nganhTen = String(req.body.nganh || '').trim();
   const ma_sv = String(req.body.ma_sv || '').trim().toUpperCase();
   const ten_sv = String(req.body.ten_sv || '').trim();
@@ -107,9 +123,11 @@ router.put('/password', authRequired, async (req, res) => {
   const ok = await bcrypt.compare(matKhauCu, row.password_hash);
   if (!ok) return res.status(401).json({ error: 'Mật khẩu hiện tại không đúng' });
   if (matKhauCu === matKhauMoi) return res.status(400).json({ error: 'Mật khẩu mới phải khác mật khẩu hiện tại' });
+  if (req.user.phai_doi_mat_khau && matKhauMoi.length < 6) return res.status(400).json({ error: 'Mật khẩu mới cần tối thiểu 6 ký tự' });
+  if (matKhauMoi === MAT_KHAU_MAC_DINH) return res.status(400).json({ error: 'Không được dùng mật khẩu mặc định 123456 — hãy chọn mật khẩu khác' });
 
   const hash = await bcrypt.hash(matKhauMoi, 10);
-  await pool.query('UPDATE users SET password_hash=$1 WHERE id=$2', [hash, req.user.id]);
+  await pool.query('UPDATE users SET password_hash=$1, phai_doi_mat_khau=FALSE WHERE id=$2', [hash, req.user.id]);
   await logAction(req.user, 'CHANGE_PASSWORD', `${req.user.username} đã tự đổi mật khẩu`);
   res.json({ ok: true });
 });
@@ -150,6 +168,7 @@ router.get('/me', authRequired, (req, res) => {
       nganh: req.user.nganh,
       ma_sv: req.user.ma_sv,
       student_id: req.user.student_id,
+      phai_doi_mat_khau: req.user.phai_doi_mat_khau,
     },
   });
 });

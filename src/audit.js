@@ -8,6 +8,7 @@ const ACTIONS = {
   SELF_REGISTER: 'Tự đăng ký tài khoản sinh viên',
   CHANGE_PASSWORD: 'Tự đổi mật khẩu',
   CHANGE_NAME: 'Tự đổi tên hiển thị',
+  IMPORT_STUDENTS: 'Nhập sinh viên từ Excel',
   CREATE_ACCOUNT: 'Cấp tài khoản',
   UPDATE_ACCOUNT: 'Sửa tài khoản',
   TOGGLE_ACCOUNT: 'Khóa/Mở khóa tài khoản',

@@ -163,6 +163,42 @@ liệu ra 1 file (và tải file đó về máy khác/lưu đám mây để an t
 docker compose exec db pg_dump -U tuhoc tuhoc_dk > backup-$(date +%F).sql
 ```
 
+## Cách 4 — VPS chạy PM2 + Postgres cài sẵn (cách đang dùng thật)
+
+App chạy bằng PM2 với tên `tuhoc` (cổng trong `.env`), Postgres cài trực tiếp trên VPS (database `tuhoc_dk`),
+Nginx + certbot làm HTTPS. File `.env` trên VPS chỉ cần: `DATABASE_URL`, `JWT_SECRET`, `PORT`.
+
+### Quy trình cập nhật code
+
+1. Thay đổi được đẩy lên 1 nhánh riêng và mở Pull Request trên GitHub.
+2. Chủ repo xem và bấm **Merge** vào `main` (nên bật "Require a pull request before merging" cho `main`).
+3. Cron trên VPS chạy `deploy/auto-deploy-pm2.sh` 2 phút/lần: thấy `main` có commit mới thì tự
+   `git merge --ff-only` → `npm install` → migrate → `pm2 restart tuhoc`. Lỗi ở bước nào thì dừng, app giữ bản cũ.
+
+Bật cron (1 lần, chạy trong thư mục repo trên VPS — dòng PATH hiện tại được ghi kèm để cron tìm thấy node/pm2):
+
+```bash
+(crontab -l 2>/dev/null | grep -v auto-deploy-pm2; echo "*/2 * * * * PATH=$PATH $(pwd)/deploy/auto-deploy-pm2.sh") | crontab -
+```
+
+Xem nhật ký cập nhật: `tail -n 30 deploy-cron.log`. Chạy lại cài đặt bằng tay: `deploy/auto-deploy-pm2.sh --force`.
+
+### Nhập danh sách sinh viên từ Excel
+
+```bash
+npm run import-students -- /root/sv.xlsx --dry-run   # chạy thử, không ghi gì
+npm run import-students -- /root/sv.xlsx             # nhập thật (chạy lại nhiều lần an toàn)
+rm /root/sv.xlsx                                     # file gốc có CCCD/ngày sinh — xoá sau khi nhập
+```
+
+Sinh viên mới: đăng nhập bằng Mã SV hoặc SĐT, mật khẩu `123456`, bắt buộc đổi mật khẩu ở lần đầu.
+
+### Sao lưu
+
+```bash
+sudo -u postgres pg_dump tuhoc_dk > /root/backup-tuhoc-$(date +%F).sql
+```
+
 ## Gieo dữ liệu mẫu (tuỳ chọn — CÂN NHẮC KỸ trước khi bật trên môi trường public)
 
 `npm run seed` (chạy 1 lần, sau khi đã `migrate`) sẽ tạo:
