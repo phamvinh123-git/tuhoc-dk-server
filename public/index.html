@@ -42,20 +42,10 @@
   /* Logo phân hiệu in chìm giữa màn hình, hiện trên MỌI trang. Đặt NỔI phía trên nội dung (dưới header, menu thả xuống,
      hộp thoại, thông báo) như hình mờ trên giấy tờ — nếu đặt phía sau thì bị các thẻ/bảng trắng che mất ở các trang bên trong.
      pointer-events:none nên không cản bấm/chọn chữ; độ mờ thấp để không ảnh hưởng việc đọc.
-     Hiệu ứng lá cờ bay: logo được cắt thành nhiều dải dọc (tạo bằng JS lúc tải trang), mỗi dải nhấp nhô lệch nhịp nhau tạo
-     gợn sóng chạy từ trái sang phải; mép trái đứng yên như buộc vào cột cờ (--a = biên độ, tăng dần về bên phải).
-     Chỉ dùng transform nên rất nhẹ; tắt khi người dùng bật "giảm chuyển động" trong hệ điều hành. */
-  .gb-watermark{--W:min(70vw,620px);position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:var(--W);height:var(--W);
-    opacity:.06;pointer-events:none;user-select:none;z-index:15;filter:grayscale(35%);mix-blend-mode:multiply;}
-  .gb-watermark span{position:absolute;top:0;height:100%;left:calc(var(--W) * var(--i) / var(--n));width:calc(var(--W) / var(--n) + 2px);
-    background-image:url(/assets/logo.png);background-repeat:no-repeat;background-size:var(--W) var(--W);
-    background-position:calc(var(--W) * var(--i) / var(--n) * -1) 0;will-change:transform;
-    animation:gb-flag 3.4s ease-in-out infinite;animation-delay:var(--d);}
-  @keyframes gb-flag{
-    0%,100%{transform:translateY(calc(var(--a) * -2.4%));}
-    50%{transform:translateY(calc(var(--a) * 2.4%));}
-  }
-  @media (prefers-reduced-motion:reduce){ .gb-watermark span{animation:none;} }
+     Cố ý KHÔNG tạo chuyển động cho logo: logo phủ lên cả trang nên mỗi khung hình chuyển động buộc trình duyệt vẽ lại
+     toàn bộ vùng bên dưới — đo thực tế làm trang giật rõ trên máy yếu. */
+  .gb-watermark{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:min(70vw,620px);height:auto;opacity:.06;
+    pointer-events:none;user-select:none;z-index:15;filter:grayscale(35%);mix-blend-mode:multiply;}
 
   /* ---------- Header ---------- */
   .gb-header{background:linear-gradient(135deg,var(--brand-red) 0%,var(--brand-red-dark) 65%,var(--brand-red-darker) 100%);
@@ -100,12 +90,12 @@
   main{flex:1;width:100%;max-width:1152px;margin:0 auto;padding:24px 16px;position:relative;z-index:1;animation:gb-fade-in-up .45s ease;}
   .gb-footer{text-align:center;font-size:12px;color:#94a3b8;padding:16px;position:relative;z-index:1;}
 
-  .card{background:var(--panel);border-radius:var(--radius-lg);padding:20px;margin-bottom:18px;box-shadow:var(--shadow);
-    animation:gb-fade-in-up .5s ease both;transition:transform .18s ease,box-shadow .18s ease;}
-  .card:hover{transform:translateY(-2px);box-shadow:var(--shadow-hover);}
+  /* Không có hiệu ứng hiện dần/nhấc lên cho thẻ: trang vẽ lại sau mỗi thao tác nên hiệu ứng chạy lại liên tục gây cảm
+     giác chậm, và nhấc cả thẻ lịch tuần lớn khi rê chuột buộc trình duyệt vẽ lại toàn bộ thẻ. */
+  .card{background:var(--panel);border-radius:var(--radius-lg);padding:20px;margin-bottom:18px;box-shadow:var(--shadow);}
+  .acc-more{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;padding:14px 0 2px;font-size:13.5px;color:var(--muted);}
   .card h2{margin:0 0 4px;font-size:18px;font-weight:800;}
   .card .desc{color:var(--muted);font-size:13.5px;margin-bottom:14px;}
-  main > .card:nth-child(2){animation-delay:.05s;} main > .card:nth-child(3){animation-delay:.1s;} main > .card:nth-child(4){animation-delay:.15s;}
 
   .tabs{display:flex;gap:4px;margin-bottom:16px;border-bottom:1px solid var(--line);}
   .tabs button{background:none;border:none;padding:10px 14px;font-size:14px;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;
@@ -198,7 +188,7 @@
 
   /* Thẻ số liệu giống trang Tổng quan kế toán */
   .stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:18px;}
-  .stat{background:#fff;border-radius:var(--radius-lg);padding:20px;box-shadow:var(--shadow);animation:gb-fade-in-up .5s ease both;
+  .stat{background:#fff;border-radius:var(--radius-lg);padding:20px;box-shadow:var(--shadow);
     transition:transform .18s ease,box-shadow .18s ease;}
   .stat:hover{transform:translateY(-2px);box-shadow:var(--shadow-hover);}
   .stat .num{font-size:30px;font-weight:800;color:var(--red-700);line-height:1.2;}
@@ -212,7 +202,7 @@
   .dot{width:10px;height:10px;border-radius:3px;display:inline-block;}
   .empty{color:var(--muted);font-size:13.5px;text-align:center;padding:20px;}
 
-  .modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.45);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);
+  .modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.55);
     display:none;align-items:center;justify-content:center;z-index:100;animation:gb-fade-in .2s ease both;padding:16px;}
   .modal-overlay.show{display:flex;}
   .modal{background:#fff;border-radius:var(--radius-xl);padding:0 22px 22px;width:440px;max-width:100%;max-height:88vh;overflow:auto;
@@ -243,6 +233,51 @@
   .auth-card a{color:var(--red-700);text-decoration:none;cursor:pointer;}
   .auth-card a:hover{text-decoration:underline;}
 
+  /* ---------- Màn hình chờ (sau 30 giây không thao tác) ----------
+     Logo nhảy kiểu quả bóng (bẹp khi chạm đất, giãn khi bay lên), bóng đổ co giãn theo, vòng sóng trắng lan ra mỗi lần
+     tiếp đất, bong bóng trắng bay lên trên nền đỏ chuyển sắc. Chỉ dùng transform/opacity và chỉ chạy khi đang hiện
+     (các phần tử dùng animation-play-state: paused khi ẩn) nên không làm nặng trang lúc đang dùng. */
+  .gb-saver{position:fixed;inset:0;z-index:300;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+    color:#fff;text-align:center;overflow:hidden;cursor:pointer;opacity:0;visibility:hidden;transition:opacity .6s ease,visibility 0s linear .6s;
+    background:radial-gradient(circle at 50% 38%,#e5172f 0%,var(--brand-red) 30%,var(--brand-red-dark) 70%,var(--brand-red-darker) 100%);}
+  .gb-saver.show{opacity:1;visibility:visible;transition:opacity .6s ease,visibility 0s;}
+  .gb-saver *{animation-play-state:paused;}
+  .gb-saver.show *{animation-play-state:running;}
+  .gb-saver-stage{position:relative;width:240px;height:300px;display:flex;align-items:flex-end;justify-content:center;}
+  .gb-saver-logo{position:relative;z-index:2;width:170px;height:170px;border-radius:50%;background:#fff;padding:12px;
+    box-shadow:0 0 0 8px rgba(255,255,255,.18),0 14px 40px rgba(0,0,0,.28);transform-origin:50% 100%;
+    animation:gb-jump 1.15s infinite;}
+  .gb-saver-logo img{width:100%;height:100%;object-fit:contain;display:block;animation:gb-tilt 2.3s ease-in-out infinite;}
+  .gb-saver-shadow{position:absolute;bottom:-14px;left:50%;width:150px;height:22px;margin-left:-75px;border-radius:50%;
+    background:radial-gradient(closest-side,rgba(0,0,0,.35),rgba(0,0,0,0));animation:gb-shadow 1.15s infinite;}
+  .gb-saver-ring{position:absolute;bottom:-30px;left:50%;width:220px;height:60px;margin-left:-110px;border-radius:50%;
+    border:3px solid rgba(255,255,255,.7);opacity:0;animation:gb-ring 1.15s ease-out infinite;}
+  @keyframes gb-jump{
+    0%  {transform:translateY(0) scale(1.14,.86);animation-timing-function:cubic-bezier(.2,.7,.4,1);}
+    12% {transform:translateY(-8px) scale(.92,1.08);animation-timing-function:cubic-bezier(.2,.7,.4,1);}
+    50% {transform:translateY(-120px) scale(1,1);animation-timing-function:cubic-bezier(.6,0,.8,.3);}
+    88% {transform:translateY(-8px) scale(.95,1.05);animation-timing-function:cubic-bezier(.6,0,.8,.3);}
+    100%{transform:translateY(0) scale(1.14,.86);}
+  }
+  @keyframes gb-shadow{
+    0%,100%{transform:scale(1.1);opacity:.9;}
+    50%{transform:scale(.45);opacity:.35;}
+  }
+  @keyframes gb-ring{
+    0%{transform:scale(.5);opacity:.75;}
+    45%,100%{transform:scale(1.5);opacity:0;}
+  }
+  @keyframes gb-tilt{0%,100%{transform:rotate(-7deg);}50%{transform:rotate(7deg);}}
+  .gb-saver-title{margin-top:34px;font-size:clamp(18px,3vw,28px);font-weight:800;letter-spacing:.2px;text-shadow:0 2px 10px rgba(0,0,0,.25);padding:0 16px;}
+  .gb-saver-sub{font-size:clamp(14px,2vw,18px);color:#fee2e2;font-weight:600;}
+  .gb-saver-clock{margin-top:14px;font-size:clamp(34px,6vw,56px);font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:1px;}
+  .gb-saver-date{font-size:14px;color:#fee2e2;}
+  .gb-saver-hint{position:absolute;bottom:28px;left:0;right:0;font-size:13.5px;color:#fecaca;animation:gb-hint 2.4s ease-in-out infinite;}
+  @keyframes gb-hint{0%,100%{opacity:.45;}50%{opacity:1;}}
+  .gb-saver-bubbles span{position:absolute;bottom:-60px;border-radius:50%;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.25);
+    animation:gb-bubble linear infinite;}
+  @keyframes gb-bubble{0%{transform:translateY(0) scale(.6);opacity:0;}10%{opacity:1;}100%{transform:translateY(-115vh) scale(1.1);opacity:0;}}
+  @media (prefers-reduced-motion:reduce){ .gb-saver *{animation:none !important;} }
   @media (max-width:640px){
     .gb-brand{font-size:15px;} .gb-brand .sub{font-size:12.5px;}
     main{padding:16px 12px;}
@@ -256,7 +291,7 @@
 </head>
 <body>
 
-<div class="gb-watermark" aria-hidden="true"></div>
+<img src="/assets/logo.png" alt="" class="gb-watermark" aria-hidden="true">
 <header class="gb-header">
   <div class="gb-header-inner">
     <a class="gb-brand" href="/">
@@ -273,6 +308,20 @@
 <footer class="gb-footer">Phân hiệu Trường Đại học Y Hà Nội tại Tỉnh Thanh Hoá &middot; Hệ thống Đăng ký tự học</footer>
 
 <div class="toast" id="toast"></div>
+
+<div class="gb-saver" id="screenSaver" aria-hidden="true">
+  <div class="gb-saver-bubbles"><span style="left:6%;width:26px;height:26px;animation-duration:11s;animation-delay:-2s"></span><span style="left:15%;width:14px;height:14px;animation-duration:8s;animation-delay:-6s"></span><span style="left:24%;width:40px;height:40px;animation-duration:14s;animation-delay:-9s"></span><span style="left:37%;width:18px;height:18px;animation-duration:9s;animation-delay:-1s"></span><span style="left:48%;width:30px;height:30px;animation-duration:12s;animation-delay:-5s"></span><span style="left:58%;width:12px;height:12px;animation-duration:7s;animation-delay:-3s"></span><span style="left:67%;width:44px;height:44px;animation-duration:15s;animation-delay:-11s"></span><span style="left:77%;width:20px;height:20px;animation-duration:10s;animation-delay:-7s"></span><span style="left:86%;width:34px;height:34px;animation-duration:13s;animation-delay:-4s"></span><span style="left:94%;width:16px;height:16px;animation-duration:8s;animation-delay:-0s"></span></div>
+  <div class="gb-saver-stage">
+    <div class="gb-saver-ring"></div>
+    <div class="gb-saver-shadow"></div>
+    <div class="gb-saver-logo"><img src="/assets/logo.png" alt=""></div>
+  </div>
+  <div class="gb-saver-title">Phân hiệu Trường ĐH Y Hà Nội tại Thanh Hoá</div>
+  <div class="gb-saver-sub">Hệ thống Đăng ký tự học</div>
+  <div class="gb-saver-clock" id="saverClock"></div>
+  <div class="gb-saver-date" id="saverDate"></div>
+  <div class="gb-saver-hint">Chạm, di chuột hoặc nhấn phím bất kỳ để tiếp tục</div>
+</div>
 
 <div class="modal-overlay" id="modalOverlay">
   <div class="modal" id="modalBody"></div>
@@ -1300,9 +1349,22 @@ window.assignEquipToStudent = async function(studentId, ma_sv, ten_sv){
 };
 
 /* ============================== QUẢN LÝ TÀI KHOẢN (chỉ Quản trị viên) ============================== */
-function screenAdminAccounts(){
-  const allAccounts = adminAccountsCache;
-  const rows = allAccounts.map(a=>`
+// Danh sách tài khoản có thể lên tới hàng nghìn dòng (toàn bộ sinh viên) — vẽ hết 1 lần làm trang khựng vài giây trên
+// máy yếu. Chỉ vẽ ACC_PAGE dòng đầu của kết quả lọc, bấm "Xem thêm" để vẽ tiếp; ô tìm kiếm chỉ vẽ lại phần bảng
+// (giữ nguyên con trỏ trong ô nhập), không phân biệt hoa/thường và có dấu/không dấu.
+const ACC_PAGE = 50;
+let accSearch = '';
+let accLimit = ACC_PAGE;
+function boDau(str){ return String(str||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').replace(/Đ/g,'D').toLowerCase(); }
+function filteredAccounts(){
+  const q = boDau(accSearch.trim());
+  if(!q) return adminAccountsCache;
+  return adminAccountsCache.filter(a=>boDau([a.username,a.hoTen,a.ma_sv,ROLE_LABELS[a.role],a.nganh].join(' ')).includes(q));
+}
+function accountTableHtml(){
+  const list = filteredAccounts();
+  const shown = list.slice(0, accLimit);
+  const rows = shown.map(a=>`
     <tr>
       <td>${a.username}${a.username===currentUser.username?' <span class="hint">(bạn)</span>':''}</td>
       <td>${a.hoTen}</td>
@@ -1317,11 +1379,29 @@ function screenAdminAccounts(){
       </td>
     </tr>`).join('');
   return `
+    <table><thead><tr><th>Tên đăng nhập</th><th>Họ tên</th><th>Mã SV</th><th>Vai trò</th><th>Ngành</th><th>Trạng thái</th><th></th></tr></thead>
+    <tbody>${rows || '<tr><td colspan="7" class="empty">Không tìm thấy tài khoản phù hợp</td></tr>'}</tbody></table>
+    <div class="acc-more">Đang hiển thị ${shown.length} / ${list.length} tài khoản${accSearch.trim() ? ` khớp "${accSearch.trim().replace(/</g,'&lt;')}"` : ''}
+      ${list.length > shown.length ? `<button class="btn secondary" onclick="moreAccounts()">Xem thêm ${Math.min(ACC_PAGE, list.length - shown.length)}</button>` : ''}</div>`;
+}
+let accSearchTimer = null;
+window.onAccSearch = function(v){
+  accSearch = v;
+  clearTimeout(accSearchTimer);
+  accSearchTimer = setTimeout(()=>{ accLimit = ACC_PAGE; const el = document.getElementById('accTable'); if(el) el.innerHTML = accountTableHtml(); }, 150);
+};
+window.moreAccounts = function(){
+  accLimit += ACC_PAGE;
+  const el = document.getElementById('accTable'); if(el) el.innerHTML = accountTableHtml();
+};
+function screenAdminAccounts(){
+  const allAccounts = adminAccountsCache;
+  return `
   <div class="card">
     <h2>Quản lý tài khoản</h2>
     <div class="desc">Quyền Quản trị viên: xem, tạo, sửa, khóa/mở khóa và xóa tài khoản của tất cả vai trò (Cô trưởng bộ môn, Cố vấn học tập, Quản lý học tập, Sinh viên, Quản trị viên), thuộc mọi ngành. Tổng cộng ${allAccounts.length} tài khoản.</div>
-    <table><thead><tr><th>Tên đăng nhập</th><th>Họ tên</th><th>Mã SV</th><th>Vai trò</th><th>Ngành</th><th>Trạng thái</th><th></th></tr></thead>
-    <tbody>${rows}</tbody></table>
+    <div class="form-row"><div class="field"><input id="accSearch" type="search" placeholder="Tìm theo tên đăng nhập, họ tên, mã SV, vai trò, ngành..." value="${accSearch.replace(/"/g,'&quot;')}" oninput="onAccSearch(this.value)"></div></div>
+    <div id="accTable">${accountTableHtml()}</div>
   </div>
   <div class="card">
     <h2>Cấp tài khoản mới</h2>
@@ -1507,20 +1587,6 @@ window.loadMoreAuditLog = async function(){
 };
 
 /* ============================== TIỆN ÍCH GIAO DIỆN ============================== */
-// Logo in chìm dạng lá cờ bay: cắt logo thành N dải dọc, mỗi dải hiển thị đúng phần logo của nó (đặt theo pixel, chồng 2px
-// lên dải bên cạnh để không lộ khe hở),
-// lệch nhịp chuyển động (--d) để thành gợn sóng, biên độ (--a) tăng dần từ mép trái (cột cờ) sang mép phải.
-(function buildFlagWatermark(){
-  const el = document.querySelector('.gb-watermark');
-  if(!el) return;
-  const N = 60, PERIOD = 3.4, WAVES = 1.2; // WAVES: số gợn sóng trải trên chiều ngang lá cờ
-  let html = '';
-  for(let i = 0; i < N; i++){
-    const t = i / (N - 1);
-    html += `<span style="--i:${i};--n:${N};--a:${(0.15 + 0.85*t).toFixed(3)};--d:${(-t*PERIOD*WAVES).toFixed(3)}s"></span>`;
-  }
-  el.innerHTML = html;
-})();
 const ICON_PATHS = {
   lock:'<rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
   key:'<path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.78 7.78 5.5 5.5 0 0 1 7.78-7.78zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>',
@@ -1596,6 +1662,47 @@ document.addEventListener('click', e=>{
   el.appendChild(dot);
   setTimeout(()=>dot.remove(), 600);
 }, true);
+
+// ---------- Màn hình chờ: hiện sau 30 giây không thao tác, tắt khi có bất kỳ thao tác nào ----------
+// Chỉ ghi lại thời điểm thao tác cuối (rất nhẹ, kể cả với mousemove liên tục); 1 bộ đếm mỗi giây kiểm tra đã đủ lâu chưa.
+(function screenSaver(){
+  const IDLE_MS = 30000;
+  const el = document.getElementById('screenSaver');
+  const clockEl = document.getElementById('saverClock');
+  const dateEl = document.getElementById('saverDate');
+  const THU = ['Chủ nhật','Thứ Hai','Thứ Ba','Thứ Tư','Thứ Năm','Thứ Sáu','Thứ Bảy'];
+  let last = Date.now();
+  let shown = false;
+  function tick(){
+    const d = new Date(), p = n=>String(n).padStart(2,'0');
+    clockEl.textContent = `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+    dateEl.textContent = `${THU[d.getDay()]}, ${p(d.getDate())}/${p(d.getMonth()+1)}/${d.getFullYear()}`;
+  }
+  function show(){
+    if(shown) return;
+    shown = true; tick();
+    document.querySelectorAll('.gb-dd.open').forEach(d=>d.classList.remove('open'));
+    el.classList.add('show');
+  }
+  function hide(){
+    if(!shown) return;
+    shown = false;
+    el.classList.remove('show');
+  }
+  function activity(){
+    last = Date.now();
+    hide();
+  }
+  ['mousemove','mousedown','keydown','touchstart','wheel','scroll','focusin'].forEach(ev=>
+    window.addEventListener(ev, activity, {passive:true, capture:true}));
+  // Cú chạm/bấm đầu tiên chỉ để tắt màn hình chờ, không bấm nhầm vào nút bên dưới.
+  el.addEventListener('click', e=>{ e.stopPropagation(); activity(); });
+  setInterval(()=>{
+    if(shown){ tick(); return; }
+    if(Date.now() - last >= IDLE_MS && !document.hidden) show();
+  }, 1000);
+  window.showScreenSaver = show; // tiện để thử nhanh trong console
+})();
 
 /* ============================== MAIN RENDER ============================== */
 function render(){
