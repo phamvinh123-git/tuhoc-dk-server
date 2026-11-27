@@ -39,9 +39,11 @@
   @keyframes gb-logo-pulse{0%,100%{box-shadow:0 2px 6px rgba(0,0,0,.25),0 0 0 0 rgba(255,255,255,.35);}50%{box-shadow:0 2px 6px rgba(0,0,0,.25),0 0 0 6px rgba(255,255,255,0);}}
   @keyframes gb-ripple-anim{to{transform:scale(1);opacity:0;}}
 
-  /* Logo phân hiệu in chìm giữa trang */
-  .gb-watermark{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:min(70vw,620px);height:auto;opacity:.05;
-    pointer-events:none;user-select:none;z-index:0;filter:grayscale(35%);}
+  /* Logo phân hiệu in chìm giữa màn hình, hiện trên MỌI trang. Đặt NỔI phía trên nội dung (dưới header, menu thả xuống,
+     hộp thoại, thông báo) như hình mờ trên giấy tờ — nếu đặt phía sau thì bị các thẻ/bảng trắng che mất ở các trang bên trong.
+     pointer-events:none nên không cản bấm/chọn chữ; độ mờ thấp để không ảnh hưởng việc đọc. */
+  .gb-watermark{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:min(70vw,620px);height:auto;opacity:.06;
+    pointer-events:none;user-select:none;z-index:15;filter:grayscale(35%);mix-blend-mode:multiply;}
 
   /* ---------- Header ---------- */
   .gb-header{background:linear-gradient(135deg,var(--brand-red) 0%,var(--brand-red-dark) 65%,var(--brand-red-darker) 100%);
