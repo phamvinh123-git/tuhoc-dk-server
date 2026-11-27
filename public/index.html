@@ -42,20 +42,10 @@
   /* Logo phân hiệu in chìm giữa màn hình, hiện trên MỌI trang. Đặt NỔI phía trên nội dung (dưới header, menu thả xuống,
      hộp thoại, thông báo) như hình mờ trên giấy tờ — nếu đặt phía sau thì bị các thẻ/bảng trắng che mất ở các trang bên trong.
      pointer-events:none nên không cản bấm/chọn chữ; độ mờ thấp để không ảnh hưởng việc đọc.
-     Hiệu ứng lá cờ bay: logo được cắt thành nhiều dải dọc (tạo bằng JS lúc tải trang), mỗi dải nhấp nhô lệch nhịp nhau tạo
-     gợn sóng chạy từ trái sang phải; mép trái đứng yên như buộc vào cột cờ (--a = biên độ, tăng dần về bên phải).
-     Chỉ dùng transform nên rất nhẹ; tắt khi người dùng bật "giảm chuyển động" trong hệ điều hành. */
-  .gb-watermark{--W:min(70vw,620px);position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:var(--W);height:var(--W);
-    opacity:.06;pointer-events:none;user-select:none;z-index:15;filter:grayscale(35%);mix-blend-mode:multiply;}
-  .gb-watermark span{position:absolute;top:0;height:100%;left:calc(var(--W) * var(--i) / var(--n));width:calc(var(--W) / var(--n) + 2px);
-    background-image:url(/assets/logo.png);background-repeat:no-repeat;background-size:var(--W) var(--W);
-    background-position:calc(var(--W) * var(--i) / var(--n) * -1) 0;will-change:transform;
-    animation:gb-flag 3.4s ease-in-out infinite;animation-delay:var(--d);}
-  @keyframes gb-flag{
-    0%,100%{transform:translateY(calc(var(--a) * -2.4%));}
-    50%{transform:translateY(calc(var(--a) * 2.4%));}
-  }
-  @media (prefers-reduced-motion:reduce){ .gb-watermark span{animation:none;} }
+     Cố ý KHÔNG tạo chuyển động cho logo: logo phủ lên cả trang nên mỗi khung hình chuyển động buộc trình duyệt vẽ lại
+     toàn bộ vùng bên dưới — đo thực tế làm trang giật rõ trên máy yếu. */
+  .gb-watermark{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:min(70vw,620px);height:auto;opacity:.06;
+    pointer-events:none;user-select:none;z-index:15;filter:grayscale(35%);mix-blend-mode:multiply;}
 
   /* ---------- Header ---------- */
   .gb-header{background:linear-gradient(135deg,var(--brand-red) 0%,var(--brand-red-dark) 65%,var(--brand-red-darker) 100%);
@@ -100,12 +90,12 @@
   main{flex:1;width:100%;max-width:1152px;margin:0 auto;padding:24px 16px;position:relative;z-index:1;animation:gb-fade-in-up .45s ease;}
   .gb-footer{text-align:center;font-size:12px;color:#94a3b8;padding:16px;position:relative;z-index:1;}
 
-  .card{background:var(--panel);border-radius:var(--radius-lg);padding:20px;margin-bottom:18px;box-shadow:var(--shadow);
-    animation:gb-fade-in-up .5s ease both;transition:transform .18s ease,box-shadow .18s ease;}
-  .card:hover{transform:translateY(-2px);box-shadow:var(--shadow-hover);}
+  /* Không có hiệu ứng hiện dần/nhấc lên cho thẻ: trang vẽ lại sau mỗi thao tác nên hiệu ứng chạy lại liên tục gây cảm
+     giác chậm, và nhấc cả thẻ lịch tuần lớn khi rê chuột buộc trình duyệt vẽ lại toàn bộ thẻ. */
+  .card{background:var(--panel);border-radius:var(--radius-lg);padding:20px;margin-bottom:18px;box-shadow:var(--shadow);}
+  .acc-more{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;padding:14px 0 2px;font-size:13.5px;color:var(--muted);}
   .card h2{margin:0 0 4px;font-size:18px;font-weight:800;}
   .card .desc{color:var(--muted);font-size:13.5px;margin-bottom:14px;}
-  main > .card:nth-child(2){animation-delay:.05s;} main > .card:nth-child(3){animation-delay:.1s;} main > .card:nth-child(4){animation-delay:.15s;}
 
   .tabs{display:flex;gap:4px;margin-bottom:16px;border-bottom:1px solid var(--line);}
   .tabs button{background:none;border:none;padding:10px 14px;font-size:14px;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;
@@ -198,7 +188,7 @@
 
   /* Thẻ số liệu giống trang Tổng quan kế toán */
   .stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:18px;}
-  .stat{background:#fff;border-radius:var(--radius-lg);padding:20px;box-shadow:var(--shadow);animation:gb-fade-in-up .5s ease both;
+  .stat{background:#fff;border-radius:var(--radius-lg);padding:20px;box-shadow:var(--shadow);
     transition:transform .18s ease,box-shadow .18s ease;}
   .stat:hover{transform:translateY(-2px);box-shadow:var(--shadow-hover);}
   .stat .num{font-size:30px;font-weight:800;color:var(--red-700);line-height:1.2;}
@@ -212,7 +202,7 @@
   .dot{width:10px;height:10px;border-radius:3px;display:inline-block;}
   .empty{color:var(--muted);font-size:13.5px;text-align:center;padding:20px;}
 
-  .modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.45);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);
+  .modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.55);
     display:none;align-items:center;justify-content:center;z-index:100;animation:gb-fade-in .2s ease both;padding:16px;}
   .modal-overlay.show{display:flex;}
   .modal{background:#fff;border-radius:var(--radius-xl);padding:0 22px 22px;width:440px;max-width:100%;max-height:88vh;overflow:auto;
@@ -256,7 +246,7 @@
 </head>
 <body>
 
-<div class="gb-watermark" aria-hidden="true"></div>
+<img src="/assets/logo.png" alt="" class="gb-watermark" aria-hidden="true">
 <header class="gb-header">
   <div class="gb-header-inner">
     <a class="gb-brand" href="/">
@@ -1300,9 +1290,22 @@ window.assignEquipToStudent = async function(studentId, ma_sv, ten_sv){
 };
 
 /* ============================== QUẢN LÝ TÀI KHOẢN (chỉ Quản trị viên) ============================== */
-function screenAdminAccounts(){
-  const allAccounts = adminAccountsCache;
-  const rows = allAccounts.map(a=>`
+// Danh sách tài khoản có thể lên tới hàng nghìn dòng (toàn bộ sinh viên) — vẽ hết 1 lần làm trang khựng vài giây trên
+// máy yếu. Chỉ vẽ ACC_PAGE dòng đầu của kết quả lọc, bấm "Xem thêm" để vẽ tiếp; ô tìm kiếm chỉ vẽ lại phần bảng
+// (giữ nguyên con trỏ trong ô nhập), không phân biệt hoa/thường và có dấu/không dấu.
+const ACC_PAGE = 50;
+let accSearch = '';
+let accLimit = ACC_PAGE;
+function boDau(str){ return String(str||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').replace(/Đ/g,'D').toLowerCase(); }
+function filteredAccounts(){
+  const q = boDau(accSearch.trim());
+  if(!q) return adminAccountsCache;
+  return adminAccountsCache.filter(a=>boDau([a.username,a.hoTen,a.ma_sv,ROLE_LABELS[a.role],a.nganh].join(' ')).includes(q));
+}
+function accountTableHtml(){
+  const list = filteredAccounts();
+  const shown = list.slice(0, accLimit);
+  const rows = shown.map(a=>`
     <tr>
       <td>${a.username}${a.username===currentUser.username?' <span class="hint">(bạn)</span>':''}</td>
       <td>${a.hoTen}</td>
@@ -1317,11 +1320,29 @@ function screenAdminAccounts(){
       </td>
     </tr>`).join('');
   return `
+    <table><thead><tr><th>Tên đăng nhập</th><th>Họ tên</th><th>Mã SV</th><th>Vai trò</th><th>Ngành</th><th>Trạng thái</th><th></th></tr></thead>
+    <tbody>${rows || '<tr><td colspan="7" class="empty">Không tìm thấy tài khoản phù hợp</td></tr>'}</tbody></table>
+    <div class="acc-more">Đang hiển thị ${shown.length} / ${list.length} tài khoản${accSearch.trim() ? ` khớp "${accSearch.trim().replace(/</g,'&lt;')}"` : ''}
+      ${list.length > shown.length ? `<button class="btn secondary" onclick="moreAccounts()">Xem thêm ${Math.min(ACC_PAGE, list.length - shown.length)}</button>` : ''}</div>`;
+}
+let accSearchTimer = null;
+window.onAccSearch = function(v){
+  accSearch = v;
+  clearTimeout(accSearchTimer);
+  accSearchTimer = setTimeout(()=>{ accLimit = ACC_PAGE; const el = document.getElementById('accTable'); if(el) el.innerHTML = accountTableHtml(); }, 150);
+};
+window.moreAccounts = function(){
+  accLimit += ACC_PAGE;
+  const el = document.getElementById('accTable'); if(el) el.innerHTML = accountTableHtml();
+};
+function screenAdminAccounts(){
+  const allAccounts = adminAccountsCache;
+  return `
   <div class="card">
     <h2>Quản lý tài khoản</h2>
     <div class="desc">Quyền Quản trị viên: xem, tạo, sửa, khóa/mở khóa và xóa tài khoản của tất cả vai trò (Cô trưởng bộ môn, Cố vấn học tập, Quản lý học tập, Sinh viên, Quản trị viên), thuộc mọi ngành. Tổng cộng ${allAccounts.length} tài khoản.</div>
-    <table><thead><tr><th>Tên đăng nhập</th><th>Họ tên</th><th>Mã SV</th><th>Vai trò</th><th>Ngành</th><th>Trạng thái</th><th></th></tr></thead>
-    <tbody>${rows}</tbody></table>
+    <div class="form-row"><div class="field"><input id="accSearch" type="search" placeholder="Tìm theo tên đăng nhập, họ tên, mã SV, vai trò, ngành..." value="${accSearch.replace(/"/g,'&quot;')}" oninput="onAccSearch(this.value)"></div></div>
+    <div id="accTable">${accountTableHtml()}</div>
   </div>
   <div class="card">
     <h2>Cấp tài khoản mới</h2>
@@ -1507,20 +1528,6 @@ window.loadMoreAuditLog = async function(){
 };
 
 /* ============================== TIỆN ÍCH GIAO DIỆN ============================== */
-// Logo in chìm dạng lá cờ bay: cắt logo thành N dải dọc, mỗi dải hiển thị đúng phần logo của nó (đặt theo pixel, chồng 2px
-// lên dải bên cạnh để không lộ khe hở),
-// lệch nhịp chuyển động (--d) để thành gợn sóng, biên độ (--a) tăng dần từ mép trái (cột cờ) sang mép phải.
-(function buildFlagWatermark(){
-  const el = document.querySelector('.gb-watermark');
-  if(!el) return;
-  const N = 60, PERIOD = 3.4, WAVES = 1.2; // WAVES: số gợn sóng trải trên chiều ngang lá cờ
-  let html = '';
-  for(let i = 0; i < N; i++){
-    const t = i / (N - 1);
-    html += `<span style="--i:${i};--n:${N};--a:${(0.15 + 0.85*t).toFixed(3)};--d:${(-t*PERIOD*WAVES).toFixed(3)}s"></span>`;
-  }
-  el.innerHTML = html;
-})();
 const ICON_PATHS = {
   lock:'<rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
   key:'<path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.78 7.78 5.5 5.5 0 0 1 7.78-7.78zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>',
