@@ -233,6 +233,51 @@
   .auth-card a{color:var(--red-700);text-decoration:none;cursor:pointer;}
   .auth-card a:hover{text-decoration:underline;}
 
+  /* ---------- Màn hình chờ (sau 30 giây không thao tác) ----------
+     Logo nhảy kiểu quả bóng (bẹp khi chạm đất, giãn khi bay lên), bóng đổ co giãn theo, vòng sóng trắng lan ra mỗi lần
+     tiếp đất, bong bóng trắng bay lên trên nền đỏ chuyển sắc. Chỉ dùng transform/opacity và chỉ chạy khi đang hiện
+     (các phần tử dùng animation-play-state: paused khi ẩn) nên không làm nặng trang lúc đang dùng. */
+  .gb-saver{position:fixed;inset:0;z-index:300;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+    color:#fff;text-align:center;overflow:hidden;cursor:pointer;opacity:0;visibility:hidden;transition:opacity .6s ease,visibility 0s linear .6s;
+    background:radial-gradient(circle at 50% 38%,#e5172f 0%,var(--brand-red) 30%,var(--brand-red-dark) 70%,var(--brand-red-darker) 100%);}
+  .gb-saver.show{opacity:1;visibility:visible;transition:opacity .6s ease,visibility 0s;}
+  .gb-saver *{animation-play-state:paused;}
+  .gb-saver.show *{animation-play-state:running;}
+  .gb-saver-stage{position:relative;width:240px;height:300px;display:flex;align-items:flex-end;justify-content:center;}
+  .gb-saver-logo{position:relative;z-index:2;width:170px;height:170px;border-radius:50%;background:#fff;padding:12px;
+    box-shadow:0 0 0 8px rgba(255,255,255,.18),0 14px 40px rgba(0,0,0,.28);transform-origin:50% 100%;
+    animation:gb-jump 1.15s infinite;}
+  .gb-saver-logo img{width:100%;height:100%;object-fit:contain;display:block;animation:gb-tilt 2.3s ease-in-out infinite;}
+  .gb-saver-shadow{position:absolute;bottom:-14px;left:50%;width:150px;height:22px;margin-left:-75px;border-radius:50%;
+    background:radial-gradient(closest-side,rgba(0,0,0,.35),rgba(0,0,0,0));animation:gb-shadow 1.15s infinite;}
+  .gb-saver-ring{position:absolute;bottom:-30px;left:50%;width:220px;height:60px;margin-left:-110px;border-radius:50%;
+    border:3px solid rgba(255,255,255,.7);opacity:0;animation:gb-ring 1.15s ease-out infinite;}
+  @keyframes gb-jump{
+    0%  {transform:translateY(0) scale(1.14,.86);animation-timing-function:cubic-bezier(.2,.7,.4,1);}
+    12% {transform:translateY(-8px) scale(.92,1.08);animation-timing-function:cubic-bezier(.2,.7,.4,1);}
+    50% {transform:translateY(-120px) scale(1,1);animation-timing-function:cubic-bezier(.6,0,.8,.3);}
+    88% {transform:translateY(-8px) scale(.95,1.05);animation-timing-function:cubic-bezier(.6,0,.8,.3);}
+    100%{transform:translateY(0) scale(1.14,.86);}
+  }
+  @keyframes gb-shadow{
+    0%,100%{transform:scale(1.1);opacity:.9;}
+    50%{transform:scale(.45);opacity:.35;}
+  }
+  @keyframes gb-ring{
+    0%{transform:scale(.5);opacity:.75;}
+    45%,100%{transform:scale(1.5);opacity:0;}
+  }
+  @keyframes gb-tilt{0%,100%{transform:rotate(-7deg);}50%{transform:rotate(7deg);}}
+  .gb-saver-title{margin-top:34px;font-size:clamp(18px,3vw,28px);font-weight:800;letter-spacing:.2px;text-shadow:0 2px 10px rgba(0,0,0,.25);padding:0 16px;}
+  .gb-saver-sub{font-size:clamp(14px,2vw,18px);color:#fee2e2;font-weight:600;}
+  .gb-saver-clock{margin-top:14px;font-size:clamp(34px,6vw,56px);font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:1px;}
+  .gb-saver-date{font-size:14px;color:#fee2e2;}
+  .gb-saver-hint{position:absolute;bottom:28px;left:0;right:0;font-size:13.5px;color:#fecaca;animation:gb-hint 2.4s ease-in-out infinite;}
+  @keyframes gb-hint{0%,100%{opacity:.45;}50%{opacity:1;}}
+  .gb-saver-bubbles span{position:absolute;bottom:-60px;border-radius:50%;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.25);
+    animation:gb-bubble linear infinite;}
+  @keyframes gb-bubble{0%{transform:translateY(0) scale(.6);opacity:0;}10%{opacity:1;}100%{transform:translateY(-115vh) scale(1.1);opacity:0;}}
+  @media (prefers-reduced-motion:reduce){ .gb-saver *{animation:none !important;} }
   @media (max-width:640px){
     .gb-brand{font-size:15px;} .gb-brand .sub{font-size:12.5px;}
     main{padding:16px 12px;}
@@ -263,6 +308,20 @@
 <footer class="gb-footer">Phân hiệu Trường Đại học Y Hà Nội tại Tỉnh Thanh Hoá &middot; Hệ thống Đăng ký tự học</footer>
 
 <div class="toast" id="toast"></div>
+
+<div class="gb-saver" id="screenSaver" aria-hidden="true">
+  <div class="gb-saver-bubbles"><span style="left:6%;width:26px;height:26px;animation-duration:11s;animation-delay:-2s"></span><span style="left:15%;width:14px;height:14px;animation-duration:8s;animation-delay:-6s"></span><span style="left:24%;width:40px;height:40px;animation-duration:14s;animation-delay:-9s"></span><span style="left:37%;width:18px;height:18px;animation-duration:9s;animation-delay:-1s"></span><span style="left:48%;width:30px;height:30px;animation-duration:12s;animation-delay:-5s"></span><span style="left:58%;width:12px;height:12px;animation-duration:7s;animation-delay:-3s"></span><span style="left:67%;width:44px;height:44px;animation-duration:15s;animation-delay:-11s"></span><span style="left:77%;width:20px;height:20px;animation-duration:10s;animation-delay:-7s"></span><span style="left:86%;width:34px;height:34px;animation-duration:13s;animation-delay:-4s"></span><span style="left:94%;width:16px;height:16px;animation-duration:8s;animation-delay:-0s"></span></div>
+  <div class="gb-saver-stage">
+    <div class="gb-saver-ring"></div>
+    <div class="gb-saver-shadow"></div>
+    <div class="gb-saver-logo"><img src="/assets/logo.png" alt=""></div>
+  </div>
+  <div class="gb-saver-title">Phân hiệu Trường ĐH Y Hà Nội tại Thanh Hoá</div>
+  <div class="gb-saver-sub">Hệ thống Đăng ký tự học</div>
+  <div class="gb-saver-clock" id="saverClock"></div>
+  <div class="gb-saver-date" id="saverDate"></div>
+  <div class="gb-saver-hint">Chạm, di chuột hoặc nhấn phím bất kỳ để tiếp tục</div>
+</div>
 
 <div class="modal-overlay" id="modalOverlay">
   <div class="modal" id="modalBody"></div>
@@ -1603,6 +1662,47 @@ document.addEventListener('click', e=>{
   el.appendChild(dot);
   setTimeout(()=>dot.remove(), 600);
 }, true);
+
+// ---------- Màn hình chờ: hiện sau 30 giây không thao tác, tắt khi có bất kỳ thao tác nào ----------
+// Chỉ ghi lại thời điểm thao tác cuối (rất nhẹ, kể cả với mousemove liên tục); 1 bộ đếm mỗi giây kiểm tra đã đủ lâu chưa.
+(function screenSaver(){
+  const IDLE_MS = 30000;
+  const el = document.getElementById('screenSaver');
+  const clockEl = document.getElementById('saverClock');
+  const dateEl = document.getElementById('saverDate');
+  const THU = ['Chủ nhật','Thứ Hai','Thứ Ba','Thứ Tư','Thứ Năm','Thứ Sáu','Thứ Bảy'];
+  let last = Date.now();
+  let shown = false;
+  function tick(){
+    const d = new Date(), p = n=>String(n).padStart(2,'0');
+    clockEl.textContent = `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+    dateEl.textContent = `${THU[d.getDay()]}, ${p(d.getDate())}/${p(d.getMonth()+1)}/${d.getFullYear()}`;
+  }
+  function show(){
+    if(shown) return;
+    shown = true; tick();
+    document.querySelectorAll('.gb-dd.open').forEach(d=>d.classList.remove('open'));
+    el.classList.add('show');
+  }
+  function hide(){
+    if(!shown) return;
+    shown = false;
+    el.classList.remove('show');
+  }
+  function activity(){
+    last = Date.now();
+    hide();
+  }
+  ['mousemove','mousedown','keydown','touchstart','wheel','scroll','focusin'].forEach(ev=>
+    window.addEventListener(ev, activity, {passive:true, capture:true}));
+  // Cú chạm/bấm đầu tiên chỉ để tắt màn hình chờ, không bấm nhầm vào nút bên dưới.
+  el.addEventListener('click', e=>{ e.stopPropagation(); activity(); });
+  setInterval(()=>{
+    if(shown){ tick(); return; }
+    if(Date.now() - last >= IDLE_MS && !document.hidden) show();
+  }, 1000);
+  window.showScreenSaver = show; // tiện để thử nhanh trong console
+})();
 
 /* ============================== MAIN RENDER ============================== */
 function render(){
