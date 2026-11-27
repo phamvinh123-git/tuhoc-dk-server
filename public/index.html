@@ -41,9 +41,21 @@
 
   /* Logo phân hiệu in chìm giữa màn hình, hiện trên MỌI trang. Đặt NỔI phía trên nội dung (dưới header, menu thả xuống,
      hộp thoại, thông báo) như hình mờ trên giấy tờ — nếu đặt phía sau thì bị các thẻ/bảng trắng che mất ở các trang bên trong.
-     pointer-events:none nên không cản bấm/chọn chữ; độ mờ thấp để không ảnh hưởng việc đọc. */
-  .gb-watermark{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:min(70vw,620px);height:auto;opacity:.06;
-    pointer-events:none;user-select:none;z-index:15;filter:grayscale(35%);mix-blend-mode:multiply;}
+     pointer-events:none nên không cản bấm/chọn chữ; độ mờ thấp để không ảnh hưởng việc đọc.
+     Hiệu ứng lá cờ bay: logo được cắt thành nhiều dải dọc (tạo bằng JS lúc tải trang), mỗi dải nhấp nhô lệch nhịp nhau tạo
+     gợn sóng chạy từ trái sang phải; mép trái đứng yên như buộc vào cột cờ (--a = biên độ, tăng dần về bên phải).
+     Chỉ dùng transform nên rất nhẹ; tắt khi người dùng bật "giảm chuyển động" trong hệ điều hành. */
+  .gb-watermark{--W:min(70vw,620px);position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:var(--W);height:var(--W);
+    opacity:.06;pointer-events:none;user-select:none;z-index:15;filter:grayscale(35%);mix-blend-mode:multiply;}
+  .gb-watermark span{position:absolute;top:0;height:100%;left:calc(var(--W) * var(--i) / var(--n));width:calc(var(--W) / var(--n) + 2px);
+    background-image:url(/assets/logo.png);background-repeat:no-repeat;background-size:var(--W) var(--W);
+    background-position:calc(var(--W) * var(--i) / var(--n) * -1) 0;will-change:transform;
+    animation:gb-flag 3.4s ease-in-out infinite;animation-delay:var(--d);}
+  @keyframes gb-flag{
+    0%,100%{transform:translateY(calc(var(--a) * -2.4%));}
+    50%{transform:translateY(calc(var(--a) * 2.4%));}
+  }
+  @media (prefers-reduced-motion:reduce){ .gb-watermark span{animation:none;} }
 
   /* ---------- Header ---------- */
   .gb-header{background:linear-gradient(135deg,var(--brand-red) 0%,var(--brand-red-dark) 65%,var(--brand-red-darker) 100%);
@@ -244,7 +256,7 @@
 </head>
 <body>
 
-<img src="/assets/logo.png" alt="" class="gb-watermark" aria-hidden="true">
+<div class="gb-watermark" aria-hidden="true"></div>
 <header class="gb-header">
   <div class="gb-header-inner">
     <a class="gb-brand" href="/">
@@ -1495,6 +1507,20 @@ window.loadMoreAuditLog = async function(){
 };
 
 /* ============================== TIỆN ÍCH GIAO DIỆN ============================== */
+// Logo in chìm dạng lá cờ bay: cắt logo thành N dải dọc, mỗi dải hiển thị đúng phần logo của nó (đặt theo pixel, chồng 2px
+// lên dải bên cạnh để không lộ khe hở),
+// lệch nhịp chuyển động (--d) để thành gợn sóng, biên độ (--a) tăng dần từ mép trái (cột cờ) sang mép phải.
+(function buildFlagWatermark(){
+  const el = document.querySelector('.gb-watermark');
+  if(!el) return;
+  const N = 60, PERIOD = 3.4, WAVES = 1.2; // WAVES: số gợn sóng trải trên chiều ngang lá cờ
+  let html = '';
+  for(let i = 0; i < N; i++){
+    const t = i / (N - 1);
+    html += `<span style="--i:${i};--n:${N};--a:${(0.15 + 0.85*t).toFixed(3)};--d:${(-t*PERIOD*WAVES).toFixed(3)}s"></span>`;
+  }
+  el.innerHTML = html;
+})();
 const ICON_PATHS = {
   lock:'<rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
   key:'<path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.78 7.78 5.5 5.5 0 0 1 7.78-7.78zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>',
