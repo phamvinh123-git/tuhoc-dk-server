@@ -438,12 +438,9 @@ function screenLogin(){
       <img src="/assets/logo.png" alt="Đại học Y Hà Nội - Phân hiệu Thanh Hóa" style="width:64px;height:64px;display:block;margin:0 auto 12px;">
       <h1 style="text-align:center;">Đăng ký Tự học</h1>
       <div class="desc" style="text-align:center;margin-bottom:6px;">Phân hiệu Thanh Hóa · Đại học Y Hà Nội</div>
-      <div class="desc">Đăng nhập để tiếp tục. Mỗi tài khoản chỉ thấy đúng ngành và đúng vai trò được cấp — riêng Quản trị viên xem/thao tác được trên mọi ngành, mọi vai trò.</div>
-      <div class="field"><label>Mã sinh viên / Số điện thoại / Tên đăng nhập</label><input id="loginUser" placeholder="vd: 2650220063 hoặc 0912345678" autocomplete="username" onkeydown="if(event.key==='Enter')doLogin()"></div>
-      <div class="field"><label>Mật khẩu</label><input id="loginPass" type="password" placeholder="••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"></div>
+      <div class="field"><label>Mã sinh viên hoặc Số điện thoại</label><input id="loginUser" autocomplete="username" onkeydown="if(event.key==='Enter')doLogin()"></div>
+      <div class="field"><label>Mật khẩu</label><input id="loginPass" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"></div>
       <button class="btn" style="width:100%;" onclick="doLogin()">Đăng nhập</button>
-      <div class="desc" style="margin-top:10px;margin-bottom:0;">Sinh viên đăng nhập lần đầu: dùng mật khẩu <b>123456</b>, hệ thống sẽ yêu cầu đổi mật khẩu mới ngay.</div>
-      <div class="switch-line">Chưa có tài khoản? <a onclick="goRegister()">Đăng ký tài khoản sinh viên</a></div>
     </div>
   </div>`;
 }
@@ -492,7 +489,7 @@ async function enterApp(acc){
 window.doLogin = async function(){
   const u = document.getElementById('loginUser').value;
   const p = document.getElementById('loginPass').value;
-  if(!u || !p) return toast('Vui lòng nhập Mã sinh viên / Số điện thoại và mật khẩu');
+  if(!u || !p) return toast('Vui lòng nhập Mã sinh viên hoặc Số điện thoại và mật khẩu');
   let res;
   try{ res = await apiFetch('/auth/login', {method:'POST', body:JSON.stringify({username:u, password:p})}); }
   catch(e){ return toast(e.message); }
@@ -515,10 +512,10 @@ function screenForcePassword(){
   return `
   <div class="auth-wrap">
     <div class="auth-card">
-      <h1>Đổi mật khẩu lần đầu</h1>
-      <div class="desc">Xin chào <b>${currentUser.hoTen}</b>${currentUser.ma_sv?` (${currentUser.ma_sv})`:''}. Vì lý do bảo mật, bạn cần đặt mật khẩu mới trước khi sử dụng hệ thống.</div>
-      <div class="field"><label>Mật khẩu hiện tại</label><input id="fpOld" type="password" placeholder="mật khẩu vừa dùng để đăng nhập" autocomplete="current-password" onkeydown="if(event.key==='Enter')document.getElementById('fpNew').focus()"></div>
-      <div class="field"><label>Mật khẩu mới</label><input id="fpNew" type="password" placeholder="tối thiểu 6 ký tự" autocomplete="new-password" onkeydown="if(event.key==='Enter')document.getElementById('fpNew2').focus()"></div>
+      <h1>Đổi mật khẩu</h1>
+      <div class="desc"><b>${currentUser.hoTen}</b>${currentUser.ma_sv?` · ${currentUser.ma_sv}`:''}</div>
+      <div class="field"><label>Mật khẩu hiện tại</label><input id="fpOld" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')document.getElementById('fpNew').focus()"></div>
+      <div class="field"><label>Mật khẩu mới</label><input id="fpNew" type="password" autocomplete="new-password" onkeydown="if(event.key==='Enter')document.getElementById('fpNew2').focus()"></div>
       <div class="field"><label>Nhập lại mật khẩu mới</label><input id="fpNew2" type="password" autocomplete="new-password" onkeydown="if(event.key==='Enter')doForcePassword()"></div>
       <button class="btn" style="width:100%;" onclick="doForcePassword()">Lưu mật khẩu mới</button>
       <div class="switch-line"><a onclick="doLogout()">Đăng xuất</a></div>
@@ -1421,7 +1418,7 @@ function render(){
   renderHeaderRight();
   const app = document.getElementById('app');
   if(!currentUser){
-    app.innerHTML = authScreen==='register' ? screenRegister() : screenLogin();
+    app.innerHTML = screenLogin();
     return;
   }
   if(currentUser.phaiDoiMatKhau){ app.innerHTML = screenForcePassword(); return; }

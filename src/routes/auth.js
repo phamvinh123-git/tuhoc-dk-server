@@ -27,25 +27,29 @@ function userView(row) {
 router.post('/login', async (req, res) => {
   const username = String(req.body.username || '').trim().toLowerCase();
   const password = String(req.body.password || '');
-  if (!username || !password) return res.status(400).json({ error: 'Vui lòng nhập tên đăng nhập và mật khẩu' });
+  if (!username || !password) return res.status(400).json({ error: 'Vui lòng nhập Mã sinh viên hoặc Số điện thoại và mật khẩu' });
 
-  // Cho phép đăng nhập bằng 1 trong 3: tên đăng nhập, Mã sinh viên, hoặc Số điện thoại đã đăng ký. Ưu tiên
-  // khớp tên đăng nhập trước, rồi Mã SV, rồi SĐT — để tài khoản cán bộ không bao giờ bị "che" bởi sinh viên.
+  // Sinh viên chỉ đăng nhập bằng Mã sinh viên hoặc Số điện thoại đã đăng ký. Tài khoản cán bộ (Admin, Trưởng bộ
+  // môn, Cố vấn, Quản lý — không có Mã SV/SĐT) vẫn đăng nhập bằng tên đăng nhập được cấp. Ưu tiên khớp cán bộ
+  // trước, rồi Mã SV, rồi SĐT — để tài khoản cán bộ không bao giờ bị "che" bởi sinh viên.
   const r = await pool.query(
     `SELECT u.id, u.username, u.password_hash, u.ho_ten, u.role, u.dang_hoat_dong, u.nganh_id, u.phai_doi_mat_khau,
             n.ten_nganh, s.id AS student_id, s.ma_sv
      FROM users u
      LEFT JOIN nganh n ON n.id = u.nganh_id
      LEFT JOIN students s ON s.user_id = u.id
-     WHERE lower(u.username) = $1 OR lower(s.ma_sv) = $1 OR ($2::text IS NOT NULL AND s.so_dien_thoai = $2)
-     ORDER BY (lower(u.username) = $1) DESC, (lower(s.ma_sv) = $1) DESC NULLS LAST
+     WHERE (u.role <> 'SINH_VIEN' AND lower(u.username) = $1)
+        OR lower(s.ma_sv) = $1
+        OR ($2::text IS NOT NULL AND s.so_dien_thoai = $2)
+     ORDER BY (u.role <> 'SINH_VIEN' AND lower(u.username) = $1) DESC, (lower(s.ma_sv) = $1) DESC NULLS LAST
      LIMIT 1`,
     [username, normalizePhone(username)]
   );
   const row = r.rows[0];
-  if (!row) return res.status(401).json({ error: 'Sai tên đăng nhập hoặc mật khẩu' });
+  const SAI = 'Sai Mã sinh viên/Số điện thoại hoặc mật khẩu';
+  if (!row) return res.status(401).json({ error: SAI });
   const ok = await bcrypt.compare(password, row.password_hash);
-  if (!ok) return res.status(401).json({ error: 'Sai tên đăng nhập hoặc mật khẩu' });
+  if (!ok) return res.status(401).json({ error: SAI });
   if (!row.dang_hoat_dong) return res.status(403).json({ error: 'Tài khoản đã bị khóa — liên hệ Quản trị viên để được mở lại.' });
 
   const token = signToken({ uid: row.id });
@@ -54,6 +58,9 @@ router.post('/login', async (req, res) => {
 });
 
 router.post('/register', async (req, res) => {
+  // Bản chính thức: tài khoản sinh viên được nhập sẵn từ danh sách của trường (npm run import-students),
+  // không cho tự tạo tài khoản nữa. Đặt TU_DANG_KY=1 trong .env nếu cần bật lại.
+  if (process.env.TU_DANG_KY !== '1') return res.status(403).json({ error: 'Không hỗ trợ tự đăng ký tài khoản — liên hệ phòng Đào tạo nếu chưa có tài khoản.' });
   const nganhTen = String(req.body.nganh || '').trim();
   const ma_sv = String(req.body.ma_sv || '').trim().toUpperCase();
   const ten_sv = String(req.body.ten_sv || '').trim();
